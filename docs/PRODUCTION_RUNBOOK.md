@@ -9,6 +9,10 @@
 5. Jalankan php artisan config:cache, php artisan route:cache, dan php artisan view:cache.
 6. Jalankan php artisan horizon:terminate setelah symlink/release berpindah.
 7. Supervisor menjalankan Horizon dan schedule:work menggunakan deploy/supervisor/gutshoes.conf.
+
+Scheduler (`schedule:work`) wajib berjalan. Selain `ExpirePendingOrders` (tiap menit), `ReconcilePendingPayments` berjalan tiap 5 menit sebagai jaring pengaman bila webhook Midtrans tidak sampai: pembayaran PENDING yang lebih tua dari `PAYMENT_RECONCILE_AFTER_MINUTES` dicek ulang ke Midtrans paling sering sekali per `PAYMENT_RECONCILE_INTERVAL_MINUTES`. Webhook tetap jalur utama; bila banyak order baru terbayar lewat rekonsiliasi, periksa URL notifikasi di dashboard Midtrans.
+
+Ongkir di-cache selama `SHIPPING_QUOTE_CACHE_MINUTES` (default 15) per asal, tujuan, berat, jumlah, dan kurir untuk menghemat kuota RajaOngkir. Tarif di checkout bisa berumur sampai selama nilai tersebut; set `0` untuk menonaktifkan.
 8. Verifikasi /api/v1/health dan /api/v1/health/ready, master wilayah, lalu smoke test katalog, login, checkout sandbox, dan admin authorization.
 
 Jangan gunakan regions:import --fresh dalam deployment rutin. Opsi tersebut menghapus tabel dari child ke parent, membutuhkan --force di production, dan dapat ditolak foreign key bila wilayah sudah direferensikan alamat. Pembaruan dataset normal dilakukan dengan mengganti CSV beserta database/data/regions/manifest.json, meninjau diff sumber, lalu menjalankan impor idempoten tanpa --fresh.

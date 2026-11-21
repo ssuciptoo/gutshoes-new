@@ -6,8 +6,10 @@ use App\Domain\Payment\ApplyMidtransStatus;
 use App\Domain\Payment\FakeMidtransProvider;
 use App\Domain\Payment\HttpMidtransProvider;
 use App\Domain\Payment\MidtransProvider;
+use App\Domain\Payment\ReconcileMidtransPayment;
 use App\Domain\Refund\RefundProvider;
 use App\Enums\UserRole;
+use App\Jobs\ReconcilePendingPayments;
 use App\Models\Inventory;
 use App\Models\Order;
 use App\Models\Payment;
@@ -186,4 +188,42 @@ it('rejects webhook signatures when no server key is configured', function () {
 
     expect(app(FakeMidtransProvider::class)->verifyWebhook($payload))->toBeFalse()
         ->and(app(HttpMidtransProvider::class)->verifyWebhook($payload))->toBeFalse();
+});
+
+it('reconciles a paid order whose webhook never arrived', function () {
+    ['order' => $order] = payableOrder();
+    $this->postJson("/api/v1/orders/{$order->order_number}/payment")->assertCreated();
+    $payment = $order->payment()->firstOrFail();
+    $payment->forceFill(['created_at' => now()->subMinutes(10)])->save();
+    $settled = midtransPayload($order, 'settlement');
+    $this->app->instance(MidtransProvider::class, Mockery::mock(FakeMidtransProvider::class.'[getStatus]')
+        ->shouldReceive('getStatus')->once()->andReturn($settled + ['currency' => 'IDR'])->getMock());
+
+    (new ReconcilePendingPayments)->handle(app(ReconcileMidtransPayment::class));
+    // A second run inside the interval must not ask Midtrans again (mock expects once).
+    (new ReconcilePendingPayments)->handle(app(ReconcileMidtransPayment::class));
+
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PAID')->and($payment->refresh()->status)->toBe('SUCCESS');
+});
+
+it('leaves fresh, expired and unknown payments alone during reconciliation', function () {
+    ['order' => $fresh] = payableOrder();
+    $this->postJson("/api/v1/orders/{$fresh->order_number}/payment")->assertCreated();
+    ['order' => $expired] = payableOrder();
+    $this->postJson("/api/v1/orders/{$expired->order_number}/payment")->assertCreated();
+    $expired->payment->forceFill(['created_at' => now()->subHour()])->save();
+    $expired->forceFill(['expires_at' => now()->subMinute()])->save();
+    ['order' => $unknown] = payableOrder();
+    $this->postJson("/api/v1/orders/{$unknown->order_number}/payment")->assertCreated();
+    $unknown->payment->forceFill(['created_at' => now()->subHour()])->save();
+
+    $provider = Mockery::mock(FakeMidtransProvider::class.'[getStatus]');
+    // Only the old, still-payable order is checked; Midtrans has no charge for it yet.
+    $provider->shouldReceive('getStatus')->once()->withArgs(fn (Order $order) => $order->id === $unknown->id)->andReturnNull();
+    $this->app->instance(MidtransProvider::class, $provider);
+
+    (new ReconcilePendingPayments)->handle(app(ReconcileMidtransPayment::class));
+
+    expect($unknown->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
+        ->and($unknown->payment->refresh()->status)->toBe('PENDING');
 });

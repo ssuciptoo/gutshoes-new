@@ -3,6 +3,16 @@
 return [
     'shipping_driver' => env('SHIPPING_DRIVER', 'fake'),
     'tracking_driver' => env('TRACKING_DRIVER', env('SHIPPING_DRIVER', 'fake')),
+    // 0 disables caching. Rates may be up to this many minutes old at checkout.
+    'shipping_quote_cache_minutes' => (int) env('SHIPPING_QUOTE_CACHE_MINUTES', 15),
+
+    // Safety net for missed Midtrans webhooks: pending payments older than
+    // `after` minutes are re-checked against Midtrans at most once per `interval`.
+    'payment_reconcile' => [
+        'after_minutes' => (int) env('PAYMENT_RECONCILE_AFTER_MINUTES', 5),
+        'interval_minutes' => (int) env('PAYMENT_RECONCILE_INTERVAL_MINUTES', 10),
+        'batch_size' => (int) env('PAYMENT_RECONCILE_BATCH_SIZE', 50),
+    ],
 
     'bootstrap_admin' => [
         'email' => env('GUTSHOES_ADMIN_EMAIL'),

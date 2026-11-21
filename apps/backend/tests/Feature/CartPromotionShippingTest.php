@@ -2,6 +2,9 @@
 
 use App\Domain\Promotion\PricingService;
 use App\Domain\Shipping\RegionAddressResolver;
+use App\Domain\Shipping\ShippingProvider;
+use App\Domain\Shipping\ShippingQuote;
+use App\Domain\Shipping\ShippingRateResolver;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Inventory;
@@ -171,4 +174,29 @@ it('looks up promotions once per cart instead of once per item', function () {
     $promotionQueries = collect(DB::getQueryLog())->filter(fn ($query) => str_contains($query['query'], 'promotions'))->count();
 
     expect($result['product_discount'])->toBe('50000.00')->and($promotionQueries)->toBeLessThanOrEqual(2);
+});
+
+it('caches shipping quotes so one checkout calls the provider once', function () {
+    config(['gutshoes.shipping_quote_cache_minutes' => 15]);
+    $calls = 0;
+    $this->app->instance(ShippingProvider::class, new class($calls) implements ShippingProvider
+    {
+        public function __construct(public int &$calls) {}
+
+        public function quote(array $origin, array $destination, int $weightGrams, int $quantity, ?string $courier = null): array
+        {
+            $this->calls++;
+
+            return [new ShippingQuote('RAJAONGKIR', 'jne', 'REG', 'Regular', '18000.00', 2)];
+        }
+    });
+    $resolver = app(ShippingRateResolver::class);
+    $origin = ['provider_area_id' => 'origin'];
+
+    $first = $resolver->quotes($origin, ['provider_area_id' => 'dest-1'], 800, 1, 'jne');
+    $again = $resolver->quotes($origin, ['provider_area_id' => 'dest-1'], 800, 1, 'JNE');
+    $resolver->quotes($origin, ['provider_area_id' => 'dest-1'], 1600, 2, 'jne');
+    $resolver->quotes($origin, ['provider_area_id' => 'dest-2'], 800, 1, 'jne');
+
+    expect($calls)->toBe(3)->and($again)->toEqual($first);
 });
