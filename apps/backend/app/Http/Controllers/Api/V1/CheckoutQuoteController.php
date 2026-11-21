@@ -19,7 +19,7 @@ class CheckoutQuoteController extends Controller
         $d = $request->validate(['province_code' => ['required', 'exists:region_provinces,code'], 'regency_code' => ['required', 'exists:region_regencies,code'], 'district_code' => ['required', 'exists:region_districts,code'], 'village_code' => ['required', 'exists:region_villages,code'], 'courier' => ['nullable', 'string', 'max:32'], 'service' => ['nullable', 'string', 'max:64'], 'voucher_code' => ['nullable', 'string', 'max:64']]);
         $destination = app(RegionAddressResolver::class)->resolve($d);
         $cart = $resolver->resolve($request, false);
-        abort_unless($cart && $cart->items()->exists(), 422, 'Cart is empty.');
+        abort_unless($cart && $cart->items()->exists(), 422, 'Keranjang kosong.');
         $cart->load('items.variant');
         $warehouse = Warehouse::where('is_active', true)->firstOrFail();
         $weight = (int) $cart->items->sum(fn ($i) => $i->variant->weight_grams * $i->quantity);
@@ -30,7 +30,7 @@ class CheckoutQuoteController extends Controller
             : (filled($d['service'] ?? null)
                 ? collect($quotes)->first(fn ($q) => $q->service === $d['service'])
                 : collect($quotes)->sortBy(fn ($q) => (float) $q->fee)->first());
-        abort_unless($selected instanceof ShippingQuote, 422, 'Selected shipping service is unavailable.');
+        abort_unless($selected instanceof ShippingQuote, 422, 'Layanan pengiriman yang dipilih tidak tersedia.');
 
         return response()->json(['data' => ['pricing' => $pricing->calculate($cart, $d['voucher_code'] ?? null, $selected->fee), 'shipping' => $selected->toArray(), 'shipping_options' => collect($quotes)->map->toArray()->values()->all()]]);
     }

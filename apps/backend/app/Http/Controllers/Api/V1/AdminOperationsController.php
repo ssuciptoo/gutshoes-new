@@ -201,7 +201,7 @@ class AdminOperationsController extends Controller
 
     public function savePromotion(Request $request, ?Promotion $promotion = null): JsonResponse
     {
-        $data = $request->validate(['name' => ['required', 'string'], 'type' => ['required', Rule::in(['PERCENTAGE', 'FIXED_AMOUNT'])], 'value' => ['required', 'numeric', 'min:0'],
+        $data = $request->validate(['name' => ['required', 'string'], 'type' => ['required', Rule::in(['PERCENTAGE', 'FIXED_AMOUNT'])], 'value' => ['required', 'numeric', 'min:0', Rule::when($request->input('type') === 'PERCENTAGE', ['max:100'])],
             'priority' => ['required', 'integer', 'min:0'], 'starts_at' => ['required', 'date'], 'ends_at' => ['required', 'date', 'after:starts_at'], 'is_active' => ['required', 'boolean'], 'product_ids' => ['sometimes', 'array'], 'product_ids.*' => ['integer', 'exists:products,id']]);
         $productIds = $data['product_ids'] ?? [];
         unset($data['product_ids']);
@@ -222,7 +222,7 @@ class AdminOperationsController extends Controller
     public function saveVoucher(Request $request, ?Voucher $voucher = null): JsonResponse
     {
         $data = $request->validate(['code' => ['required', 'string', 'max:64', Rule::unique('vouchers', 'code')->ignore($voucher?->id)], 'name' => ['required', 'string'],
-            'type' => ['required', Rule::in(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING'])], 'value' => ['required', 'numeric', 'min:0'], 'minimum_amount' => ['required', 'numeric', 'min:0'],
+            'type' => ['required', Rule::in(['PERCENTAGE', 'FIXED_AMOUNT', 'FREE_SHIPPING'])], 'value' => ['required', 'numeric', 'min:0', Rule::when($request->input('type') === 'PERCENTAGE', ['max:100'])], 'minimum_amount' => ['required', 'numeric', 'min:0'],
             'maximum_discount' => ['nullable', 'numeric', 'min:0'], 'usage_limit' => ['nullable', 'integer', 'min:1'], 'usage_limit_per_user' => ['nullable', 'integer', 'min:1'],
             'starts_at' => ['required', 'date'], 'ends_at' => ['required', 'date', 'after:starts_at'], 'is_active' => ['required', 'boolean'], 'product_ids' => ['sometimes', 'array'], 'product_ids.*' => ['integer', 'exists:products,id']]);
         $productIds = $data['product_ids'] ?? [];

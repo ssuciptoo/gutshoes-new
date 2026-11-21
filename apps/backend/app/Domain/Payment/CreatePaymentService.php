@@ -21,12 +21,12 @@ class CreatePaymentService
         [$payment, $initialize] = DB::transaction(function () use ($order): array {
             $locked = Order::query()->lockForUpdate()->findOrFail($order->id);
             if ($locked->getRawOriginal('status') !== 'PENDING_PAYMENT' || Carbon::parse($locked->expires_at)->isPast()) {
-                throw new DomainException('Order is no longer payable.');
+                throw new DomainException('Pesanan sudah tidak dapat dibayar.');
             }
             $existing = Payment::where('order_id', $locked->id)->where('provider', 'MIDTRANS')->lockForUpdate()->first();
             if ($existing) {
                 if ($existing->paid_at || $existing->status !== 'PENDING') {
-                    throw new DomainException('Payment is no longer pending.');
+                    throw new DomainException('Pembayaran pesanan ini sudah tidak menunggu.');
                 }
                 if (! $existing->snap_token) {
                     throw ValidationException::withMessages(['payment' => ['Status pembayaran masih diperiksa. Jangan membuat pesanan baru; periksa kembali status pesanan atau hubungi dukungan.']]);
@@ -52,7 +52,7 @@ class CreatePaymentService
         $payment->refresh();
         $order->refresh();
         if ($order->getRawOriginal('status') !== 'PENDING_PAYMENT' || Carbon::parse($order->expires_at)->isPast()) {
-            throw new DomainException('Order is no longer payable.');
+            throw new DomainException('Pesanan sudah tidak dapat dibayar.');
         }
 
         return ['payment' => $payment, 'redirect_url' => $payment->redirect_url

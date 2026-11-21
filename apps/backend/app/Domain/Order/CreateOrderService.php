@@ -33,25 +33,33 @@ class CreateOrderService
         }
 
         if ($cart === null) {
-            throw new DomainException('Cart is empty.');
+            throw new DomainException('Keranjang kosong.');
         }
 
-        return DB::transaction(function () use ($cart, $payload, $idempotencyKey, $payloadHash): CreateOrderResult {
+        // Quote shipping before opening the transaction: the provider call can take up to
+        // its HTTP timeout and must not hold row locks that other checkouts wait on.
+        $cart->load('items.variant');
+        $warehouse = Warehouse::where('is_active', true)->firstOrFail();
+        [$weight, $quantity] = $this->shippingLoad($cart);
+        $quotes = $this->shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $payload['address'], $weight, $quantity, $payload['shipping']['courier'] ?? null);
+        $quote = count($quotes) === 1 && $quotes[0]->service === 'REGIONAL_PER_ITEM' ? $quotes[0] : collect($quotes)->first(fn (ShippingQuote $item) => $item->service === $payload['shipping']['service']);
+        if (! $quote instanceof ShippingQuote) {
+            throw new DomainException('Layanan pengiriman yang dipilih tidak tersedia.');
+        }
+
+        return DB::transaction(function () use ($cart, $payload, $idempotencyKey, $payloadHash, $warehouse, $weight, $quantity, $quote): CreateOrderResult {
             if ($existing = Order::where('idempotency_key', $idempotencyKey)->lockForUpdate()->first()) {
                 return $this->existing($existing, $payloadHash);
             }
             $cart = Cart::query()->lockForUpdate()->findOrFail($cart->id);
             $cart->load(['items.variant.product.brand', 'items.variant.size']);
             if ($cart->status !== 'ACTIVE' || $cart->items->isEmpty()) {
-                throw new DomainException('Cart is empty or no longer active.');
+                throw new DomainException('Keranjang kosong atau sudah tidak aktif.');
             }
-            $warehouse = Warehouse::where('is_active', true)->lockForUpdate()->firstOrFail();
-            $weight = (int) $cart->items->sum(fn ($item) => $item->variant->weight_grams * $item->quantity);
-            $quantity = (int) $cart->items->sum('quantity');
-            $quotes = $this->shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $payload['address'], $weight, $quantity, $payload['shipping']['courier'] ?? null);
-            $quote = count($quotes) === 1 && $quotes[0]->service === 'REGIONAL_PER_ITEM' ? $quotes[0] : collect($quotes)->first(fn (ShippingQuote $item) => $item->service === $payload['shipping']['service']);
-            if (! $quote instanceof ShippingQuote) {
-                throw new DomainException('Selected shipping service is unavailable.');
+            // The quote was priced for the cart and warehouse read above; reject if either changed.
+            if ($this->shippingLoad($cart) !== [$weight, $quantity]
+                || Warehouse::where('is_active', true)->value('id') !== $warehouse->id) {
+                throw new DomainException('Keranjang berubah selama checkout. Periksa ongkir lalu coba lagi.');
             }
             // Lock the voucher before any limit check so concurrent checkouts serialize on it.
             $voucher = isset($payload['voucher_code']) ? Voucher::where('code', $payload['voucher_code'])->lockForUpdate()->first() : null;
@@ -75,7 +83,7 @@ class CreateOrderService
                 ]);
                 $stock = Inventory::where('warehouse_id', $warehouse->id)->where('product_variant_id', $item->product_variant_id)->first();
                 if (! $stock) {
-                    throw new DomainException('Inventory is unavailable for an ordered variant.');
+                    throw new DomainException('Stok untuk salah satu ukuran tidak tersedia.');
                 }
                 $this->inventory->reserve($stock, $order, $item->quantity);
             }
@@ -100,6 +108,15 @@ class CreateOrderService
         }
 
         return new CreateOrderResult($this->loaded($order), false);
+    }
+
+    /** @return array{0:int,1:int} total weight in grams and item count */
+    private function shippingLoad(Cart $cart): array
+    {
+        return [
+            (int) $cart->items->sum(fn ($item) => $item->variant->weight_grams * $item->quantity),
+            (int) $cart->items->sum('quantity'),
+        ];
     }
 
     private function loaded(Order $order): Order

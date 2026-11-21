@@ -57,7 +57,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 404 => 'Resource not found.',
                 409 => 'Request conflicts with an existing resource.',
                 419 => 'CSRF token mismatch.',
-                422 => 'The given data was invalid.',
+                // Business-rule messages are written for the customer (voucher, stock, payability).
+                422 => ($exception instanceof DomainException || $exception instanceof HttpExceptionInterface) && $exception->getMessage() !== ''
+                    ? $exception->getMessage()
+                    : 'The given data was invalid.',
                 429 => 'Too many requests.',
                 default => config('app.debug') ? $exception->getMessage() : 'Internal server error.',
             };

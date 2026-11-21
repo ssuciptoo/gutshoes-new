@@ -63,3 +63,19 @@ it('rejects cancellation for every fulfillment state', function (string $status)
     $this->withHeader('Idempotency-Key', 'blocked-'.$status.'-000001')->postJson("/api/v1/orders/{$order->order_number}/cancel", ['email' => $order->customer_email, 'reason' => 'Too late'])->assertStatus(422);
     expect($order->refresh()->getRawOriginal('status'))->toBe($status);
 })->with(['PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED', 'EXPIRED']);
+
+it('returns sold stock when a paid order is cancelled', function () {
+    ['order' => $order, 'inventory' => $inventory] = cancellableOrder('PAID');
+    $reservation = app(InventoryService::class)->reserve($inventory, $order, 1);
+    app(InventoryService::class)->sell($reservation);
+    expect($inventory->refresh()->only(['on_hand', 'sold']))->toBe(['on_hand' => 1, 'sold' => 1]);
+
+    $headers = ['Idempotency-Key' => 'restock-key-00000001'];
+    $payload = ['reason' => 'Changed mind'];
+    $this->withHeaders($headers)->postJson("/api/v1/orders/{$order->order_number}/cancel", $payload)->assertCreated();
+    $this->withHeaders($headers)->postJson("/api/v1/orders/{$order->order_number}/cancel", $payload)->assertCreated();
+
+    expect($inventory->refresh()->only(['on_hand', 'reserved', 'sold']))->toBe(['on_hand' => 2, 'reserved' => 0, 'sold' => 0])
+        ->and($reservation->refresh()->status)->toBe('RELEASED');
+    $this->assertDatabaseHas('inventory_movements', ['inventory_id' => $inventory->id, 'type' => 'RETURN', 'quantity_delta' => 1]);
+});

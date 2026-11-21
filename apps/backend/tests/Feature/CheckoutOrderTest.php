@@ -1,5 +1,7 @@
 <?php
 
+use App\Domain\Shipping\ShippingProvider;
+use App\Domain\Shipping\ShippingQuote;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Inventory;
@@ -79,4 +81,35 @@ it('recalculates shipping through the configured provider when creating the orde
         ->assertJsonPath('data.shipping_fee', '20000.00');
     expect($created->json('data.shipment.provider'))->toBe('FAKE')
         ->and($created->json('data.shipment.service'))->toBe('REG');
+});
+
+it('returns the business reason when checkout is rejected', function () {
+    ['cart' => $cart, 'payload' => $payload] = checkoutFixture(1);
+    $this->withHeaders(['X-Guest-Cart-Token' => $cart->guest_token, 'Idempotency-Key' => 'checkout-key-message-01'])
+        ->postJson('/api/v1/orders', $payload)->assertStatus(422)
+        ->assertJsonPath('message', 'Stok tidak mencukupi.');
+});
+
+it('quotes shipping outside the order transaction and rejects a cart changed meanwhile', function () {
+    ['cart' => $cart, 'payload' => $payload] = checkoutFixture();
+    // RefreshDatabase already holds one transaction around the test.
+    $baseLevel = DB::transactionLevel();
+    $this->app->instance(ShippingProvider::class, new class($cart, $baseLevel) implements ShippingProvider
+    {
+        public function __construct(private readonly Cart $cart, private readonly int $baseLevel) {}
+
+        public function quote(array $origin, array $destination, int $weightGrams, int $quantity, ?string $courier = null): array
+        {
+            // A slow provider call must not run while order/cart rows are locked.
+            expect(DB::transactionLevel())->toBe($this->baseLevel);
+            $this->cart->items()->update(['quantity' => 1]);
+
+            return [new ShippingQuote('FAKE', 'jne', 'REG', 'Regular', '20000.00', 3)];
+        }
+    });
+
+    $this->withHeaders(['X-Guest-Cart-Token' => $cart->guest_token, 'Idempotency-Key' => 'checkout-key-changed-01'])
+        ->postJson('/api/v1/orders', $payload)->assertStatus(422)
+        ->assertJsonPath('message', 'Keranjang berubah selama checkout. Periksa ongkir lalu coba lagi.');
+    expect(Order::count())->toBe(0);
 });

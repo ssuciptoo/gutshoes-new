@@ -36,14 +36,14 @@ class PricingService
         if ($voucherCode) {
             $voucher = Voucher::where('code', $voucherCode)->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now())->first();
             if (! $voucher) {
-                throw new DomainException('Voucher is invalid or expired.');
+                throw new DomainException('Voucher tidak valid atau sudah kedaluwarsa.');
             } if ($afterProducts < (float) $voucher->minimum_amount) {
-                throw new DomainException('Minimum transaction is not met.');
+                throw new DomainException('Minimum transaksi untuk voucher ini belum terpenuhi.');
             }
             $this->assertVoucherUsable($voucher, $cart->user_id, null);
             $applicable = $voucher->products()->doesntExist() || $cart->items->contains(fn ($i) => $voucher->products()->whereKey($i->variant->product_id)->exists());
             if (! $applicable) {
-                throw new DomainException('Voucher is not applicable.');
+                throw new DomainException('Voucher tidak berlaku untuk produk di keranjang.');
             }
             if ($voucher->type === 'PERCENTAGE') {
                 $voucherDiscount = $afterProducts * ((float) $voucher->value / 100);
@@ -75,14 +75,14 @@ class PricingService
             ->when($lock, fn ($query) => $query->lockForUpdate());
 
         if ($voucher->usage_limit && $active()->count() >= $voucher->usage_limit) {
-            throw new DomainException('Voucher usage limit reached.');
+            throw new DomainException('Kuota voucher sudah habis.');
         }
         if ($voucher->usage_limit_per_user && ($userId !== null || filled($email))) {
             $used = $active()->where(fn ($query) => $query
                 ->when($userId !== null, fn ($q) => $q->orWhere('orders.user_id', $userId))
                 ->when(filled($email), fn ($q) => $q->orWhere('orders.customer_email', $email)))->count();
             if ($used >= $voucher->usage_limit_per_user) {
-                throw new DomainException('Voucher usage limit per customer reached.');
+                throw new DomainException('Batas pemakaian voucher untuk akun/email ini sudah tercapai.');
             }
         }
     }

@@ -40,7 +40,7 @@ class CancelOrderService
                 }
             }
             if (! in_array($status, [OrderStatus::PENDING_PAYMENT->value, OrderStatus::PAID->value], true)) {
-                throw new DomainException("Order in {$status} state cannot be cancelled.");
+                throw new DomainException("Pesanan dengan status {$status} tidak dapat dibatalkan.");
             }
             $cancellation = OrderCancellation::create(['order_id' => $order->id, 'requested_by' => $actorId, 'status' => 'APPROVED', 'reason' => $reason, 'resolved_at' => now()]);
             if ($status === OrderStatus::PENDING_PAYMENT->value) {
@@ -55,6 +55,10 @@ class CancelOrderService
                 }
                 Refund::firstOrCreate(['order_id' => $order->id, 'payment_id' => $payment->id], ['idempotency_key' => 'cancellation-'.$order->id, 'status' => 'PENDING',
                     'amount' => $payment->amount, 'currency' => $payment->currency, 'reason' => $reason]);
+                // PAID has not reached PROCESSING/shipping, so the pairs are still in the warehouse.
+                foreach (InventoryReservation::where('order_id', $order->id)->where('status', ReservationStatus::SOLD->value)->get() as $reservation) {
+                    $this->inventory->restock($reservation);
+                }
             }
             $order->update(['status' => OrderStatus::CANCELLED->value]);
             $order->statusHistories()->create(['from_status' => $status, 'to_status' => OrderStatus::CANCELLED->value, 'actor_id' => $actorId, 'note' => $reason]);

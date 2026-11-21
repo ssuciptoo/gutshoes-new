@@ -135,7 +135,7 @@ it('frees voucher usage held by expired or cancelled orders', function () {
     $pricing->assertVoucherUsable($voucher, null, 'other@example.test');
 
     VoucherUsage::create(['voucher_id' => $voucher->id, 'order_id' => voucherOrder('PENDING_PAYMENT')->id, 'discount_amount' => '10000.00']);
-    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'other@example.test'))->toThrow(DomainException::class, 'Voucher usage limit reached.');
+    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'other@example.test'))->toThrow(DomainException::class, 'Kuota voucher sudah habis.');
 });
 
 it('enforces the per-customer voucher limit by account and email', function () {
@@ -144,5 +144,5 @@ it('enforces the per-customer voucher limit by account and email', function () {
     $pricing = app(PricingService::class);
 
     $pricing->assertVoucherUsable($voucher, null, 'fresh@example.test');
-    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'repeat@example.test'))->toThrow(DomainException::class, 'per customer');
+    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'repeat@example.test'))->toThrow(DomainException::class, 'Batas pemakaian voucher');
 });

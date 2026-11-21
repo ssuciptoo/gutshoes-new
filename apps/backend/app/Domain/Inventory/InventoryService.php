@@ -41,7 +41,7 @@ class InventoryService
         return DB::transaction(function () use ($inventory, $order, $quantity): InventoryReservation {
             $locked = Inventory::query()->lockForUpdate()->findOrFail($inventory->id);
             if (($locked->on_hand - $locked->reserved) < $quantity) {
-                throw new DomainException('Insufficient available stock.');
+                throw new DomainException('Stok tidak mencukupi.');
             }
             $reservation = InventoryReservation::query()->lockForUpdate()->firstOrNew(['inventory_id' => $locked->id, 'order_id' => $order->id]);
             if ($reservation->exists && $reservation->status !== ReservationStatus::ACTIVE->value) {
@@ -99,6 +99,29 @@ class InventoryService
             $inventory->refresh();
             $lockedReservation->update(['status' => ReservationStatus::SOLD->value, 'released_at' => now()]);
             $this->movement($inventory, InventoryMovementType::SELL, -$quantity, 'Reserved stock sold', InventoryReservation::class, $lockedReservation->id);
+
+            return true;
+        }, 3);
+    }
+
+    /** Put sold stock back on hand (paid order cancelled before shipping). Idempotent per reservation. */
+    public function restock(InventoryReservation $reservation, ?User $actor = null): bool
+    {
+        return DB::transaction(function () use ($reservation, $actor): bool {
+            $lockedReservation = InventoryReservation::query()->lockForUpdate()->findOrFail($reservation->id);
+            if ($lockedReservation->status !== ReservationStatus::SOLD->value) {
+                return false;
+            }
+            $inventory = Inventory::query()->lockForUpdate()->findOrFail($lockedReservation->inventory_id);
+            $quantity = $lockedReservation->quantity;
+            if ($inventory->sold < $quantity) {
+                throw new DomainException('Inventory invariant violated.');
+            }
+            $inventory->increment('on_hand', $quantity);
+            $inventory->decrement('sold', $quantity);
+            $inventory->refresh();
+            $lockedReservation->update(['status' => ReservationStatus::RELEASED->value, 'released_at' => now()]);
+            $this->movement($inventory, InventoryMovementType::RETURN, $quantity, 'Paid order cancelled; stock returned', InventoryReservation::class, $lockedReservation->id, $actor);
 
             return true;
         }, 3);

@@ -94,3 +94,15 @@ it('returns customer operational detail and updates the shipping origin', functi
 
     expect($warehouse->refresh()->provider_area_id)->toBe('IDNP6IDNC148IDND836IDZ12110');
 });
+
+it('rejects percentage promotions and vouchers above 100', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $dates = ['starts_at' => now()->toDateTimeString(), 'ends_at' => now()->addDay()->toDateTimeString(), 'is_active' => true];
+    $promotion = ['name' => 'Promo', 'priority' => 1] + $dates;
+    $voucher = ['code' => 'BIG', 'name' => 'Big', 'minimum_amount' => 0] + $dates;
+
+    $this->actingAs($admin)->postJson('/api/v1/admin/promotions', $promotion + ['type' => 'PERCENTAGE', 'value' => 150])->assertUnprocessable()->assertJsonValidationErrors('value');
+    $this->actingAs($admin)->postJson('/api/v1/admin/vouchers', $voucher + ['type' => 'PERCENTAGE', 'value' => 101])->assertUnprocessable()->assertJsonValidationErrors('value');
+    $this->actingAs($admin)->postJson('/api/v1/admin/promotions', $promotion + ['type' => 'FIXED_AMOUNT', 'value' => 150000])->assertCreated();
+    $this->actingAs($admin)->postJson('/api/v1/admin/vouchers', $voucher + ['type' => 'PERCENTAGE', 'value' => 100])->assertCreated();
+});
