@@ -18,12 +18,17 @@ class PricingService
         $subtotal = 0.0;
         $productDiscount = 0.0;
         $lines = [];
+        // One query for every promotion that touches this cart instead of one per item.
+        $productIds = $cart->items->map(fn ($item) => $item->variant->product_id)->unique()->values();
+        $promotions = Promotion::query()->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now())
+            ->whereHas('products', fn ($q) => $q->whereIn('products.id', $productIds))
+            ->with(['products' => fn ($q) => $q->whereIn('products.id', $productIds)->select('products.id')])
+            ->orderByDesc('priority')->orderBy('id')->get();
         foreach ($cart->items as $item) {
             $unit = (float) $item->variant->price;
             $line = $unit * $item->quantity;
             $subtotal += $line;
-            $promotion = Promotion::query()->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now())
-                ->whereHas('products', fn ($q) => $q->whereKey($item->variant->product_id))->orderByDesc('priority')->first();
+            $promotion = $promotions->first(fn (Promotion $candidate) => $candidate->products->contains('id', $item->variant->product_id));
             // IDR has no minor unit at Midtrans; keep every amount in whole rupiah.
             $discount = $promotion ? min($line, round($promotion->type === 'PERCENTAGE' ? $line * ((float) $promotion->value / 100) : (float) $promotion->value)) : 0.0;
             $productDiscount += $discount;
@@ -41,7 +46,8 @@ class PricingService
                 throw new DomainException('Minimum transaksi untuk voucher ini belum terpenuhi.');
             }
             $this->assertVoucherUsable($voucher, $cart->user_id, null);
-            $applicable = $voucher->products()->doesntExist() || $cart->items->contains(fn ($i) => $voucher->products()->whereKey($i->variant->product_id)->exists());
+            $voucherProductIds = $voucher->products()->pluck('products.id');
+            $applicable = $voucherProductIds->isEmpty() || $voucherProductIds->intersect($productIds)->isNotEmpty();
             if (! $applicable) {
                 throw new DomainException('Voucher tidak berlaku untuk produk di keranjang.');
             }

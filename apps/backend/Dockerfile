@@ -10,39 +10,39 @@ RUN composer install \
     --optimize-autoloader \
     --no-scripts
 
-FROM php:8.4-cli-bookworm
+# FrankenPHP is a production PHP app server (Caddy + embedded PHP, multi-threaded).
+# `php artisan serve` is a single-process development server and must not face traffic.
+FROM dunglas/frankenphp:1.9-php8.4-bookworm
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr \
     PORT=8080
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        libicu-dev \
-        libonig-dev \
-        libzip-dev \
-        unzip \
-    && docker-php-ext-install -j"$(nproc)" \
+RUN install-php-extensions \
         bcmath \
         intl \
         mbstring \
         opcache \
         pcntl \
         pdo_mysql \
-        zip \
-    && rm -rf /var/lib/apt/lists/*
+        zip
 
-WORKDIR /var/www/html
+WORKDIR /app
 
 COPY --from=vendor /usr/bin/composer /usr/bin/composer
 COPY --from=vendor /app/vendor ./vendor
 COPY . .
 
+# Run as www-data: Caddy needs its data/config dirs writable, and port 8080 needs no
+# bind capability, so the file capability on the binary is dropped as well.
 RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
-    && chown -R www-data:www-data storage bootstrap/cache \
-    && chmod -R ug+rwX storage bootstrap/cache
+    && chown -R www-data:www-data storage bootstrap/cache /data/caddy /config/caddy \
+    && chmod -R ug+rwX storage bootstrap/cache \
+    && setcap -r /usr/local/bin/frankenphp
+
+USER www-data
 
 EXPOSE 8080
 
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=${PORT:-8080}"]
+CMD ["sh", "-c", "exec frankenphp php-server --listen \":${PORT:-8080}\" --root public/"]

@@ -146,3 +146,29 @@ it('enforces the per-customer voucher limit by account and email', function () {
     $pricing->assertVoucherUsable($voucher, null, 'fresh@example.test');
     expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'repeat@example.test'))->toThrow(DomainException::class, 'Batas pemakaian voucher');
 });
+
+it('counts only stock in the active warehouse that checkout reserves from', function () {
+    $variant = ProductVariant::factory()->create();
+    Inventory::factory()->create(['product_variant_id' => $variant->id, 'on_hand' => 2]);
+    Inventory::factory()->create(['product_variant_id' => $variant->id, 'on_hand' => 50, 'warehouse_id' => Warehouse::factory()->create(['is_active' => false])->id]);
+
+    $this->postJson('/api/v1/cart/items', ['variant_id' => $variant->id, 'quantity' => 3])
+        ->assertUnprocessable()->assertJsonValidationErrors('quantity');
+    $this->postJson('/api/v1/cart/items', ['variant_id' => $variant->id, 'quantity' => 2])->assertCreated();
+});
+
+it('looks up promotions once per cart instead of once per item', function () {
+    $cart = Cart::create(['guest_token' => fake()->uuid(), 'status' => 'ACTIVE']);
+    $promotion = Promotion::create(['name' => 'Ten', 'type' => 'PERCENTAGE', 'value' => '10.00', 'priority' => 1, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    foreach (range(1, 5) as $i) {
+        $variant = ProductVariant::factory()->create(['price' => '100000.00']);
+        CartItem::create(['cart_id' => $cart->id, 'product_variant_id' => $variant->id, 'quantity' => 1]);
+        $promotion->products()->attach($variant->product_id);
+    }
+
+    DB::enableQueryLog();
+    $result = app(PricingService::class)->calculate($cart, null);
+    $promotionQueries = collect(DB::getQueryLog())->filter(fn ($query) => str_contains($query['query'], 'promotions'))->count();
+
+    expect($result['product_discount'])->toBe('50000.00')->and($promotionQueries)->toBeLessThanOrEqual(2);
+});

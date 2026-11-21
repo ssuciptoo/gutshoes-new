@@ -1,12 +1,30 @@
 const STOREFRONT_PAGES = new Set([
-  "home", "catalog", "product", "cart", "checkout", "payment",
-  "guest-orders", "tracking", "login", "profile", "addresses",
-  "orders", "order-detail",
+  "home",
+  "catalog",
+  "product",
+  "cart",
+  "checkout",
+  "payment",
+  "guest-orders",
+  "tracking",
+  "login",
+  "profile",
+  "addresses",
+  "orders",
+  "order-detail",
 ]);
 
 const ADMIN_SECTIONS = new Set([
-  "dashboard", "products", "catalog", "sizes", "inventory", "orders",
-  "customers", "promotions", "settings", "audit",
+  "dashboard",
+  "products",
+  "catalog",
+  "sizes",
+  "inventory",
+  "orders",
+  "customers",
+  "promotions",
+  "settings",
+  "audit",
 ]);
 
 const STOREFRONT_TITLES = {
@@ -44,12 +62,18 @@ export function readRoute(hash = window.location.hash) {
   const [page, encodedParameter] = path.split("/");
   const parameter = decodeURIComponent(encodedParameter || "");
   if (page === "admin") {
-    return {page, data: {section: ADMIN_SECTIONS.has(parameter) ? parameter : "dashboard"}};
+    return {
+      page,
+      data: {section: ADMIN_SECTIONS.has(parameter) ? parameter : "dashboard"},
+    };
   }
   if (!STOREFRONT_PAGES.has(page)) return {page: "home", data: {}};
   if (page === "product") return {page, data: {slug: parameter}};
   if (page === "catalog") {
-    return {page, data: {filter: new URLSearchParams(search).get("filter") || undefined}};
+    return {
+      page,
+      data: {filter: new URLSearchParams(search).get("filter") || undefined},
+    };
   }
   if (page === "order-detail") return {page, data: {orderNumber: parameter}};
   return {page, data: {}};
@@ -57,7 +81,9 @@ export function readRoute(hash = window.location.hash) {
 
 export function routeHash(page, data = {}) {
   if (page === "admin") {
-    const section = ADMIN_SECTIONS.has(data.section) ? data.section : "dashboard";
+    const section = ADMIN_SECTIONS.has(data.section)
+      ? data.section
+      : "dashboard";
     return `#admin/${section}`;
   }
   if (!STOREFRONT_PAGES.has(page)) return "#home";

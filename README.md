@@ -20,12 +20,14 @@ npm install
 npm run dev
 ```
 
-Build produksi:
+Build produksi membutuhkan `VITE_API_URL` di `apps/storefront/.env.production` (HTTPS, berakhiran `/api/v1`, bukan domain contoh). Build gagal bila nilainya kosong agar bundle tidak diam-diam memakai `http://localhost:8000`.
 
 ```powershell
 cd apps/storefront
 npm run build
 ```
+
+Image Docker storefront memakai mode `production` secara default; gunakan `--build-arg VITE_BUILD_MODE=staging` untuk staging.
 
 ## Backend
 

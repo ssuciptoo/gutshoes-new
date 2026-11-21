@@ -9,6 +9,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -101,7 +102,10 @@ class CartController extends Controller
 
     private function ensureAvailableStock(ProductVariant $variant, int $quantity): void
     {
-        $available = (int) $variant->inventories()->lockForUpdate()->get()->sum(fn ($inventory): int => max(0, (int) $inventory->on_hand - (int) $inventory->reserved));
+        // Checkout reserves only from the active warehouse (CreateOrderService), so stock
+        // held elsewhere must not let the cart accept a quantity checkout will reject.
+        $warehouseId = Warehouse::where('is_active', true)->value('id');
+        $available = (int) $variant->inventories()->where('warehouse_id', $warehouseId)->lockForUpdate()->get()->sum(fn ($inventory): int => max(0, (int) $inventory->on_hand - (int) $inventory->reserved));
         if ($quantity > $available) {
             throw ValidationException::withMessages(['quantity' => ["Jumlah melebihi stok tersedia ({$available})."]]);
         }

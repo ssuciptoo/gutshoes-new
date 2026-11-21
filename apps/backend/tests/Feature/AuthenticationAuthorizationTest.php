@@ -5,6 +5,7 @@ use App\Models\Address;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Laravel\Socialite\Facades\Socialite;
 
 uses(RefreshDatabase::class);
 
@@ -36,4 +37,42 @@ it('creates the first admin non-interactively without exposing credentials', fun
 it('logs out and invalidates the authenticated session', function () {
     $user = User::factory()->create();
     $this->actingAs($user)->postJson('/api/v1/auth/logout')->assertOk()->assertJsonPath('data.logged_out', true);
+});
+
+function fakeGoogleUser(string $id, string $email): void
+{
+    $googleUser = (new Laravel\Socialite\Two\User)->setRaw(['email_verified' => true])
+        ->map(['id' => $id, 'email' => $email, 'name' => 'Google Buyer', 'nickname' => null]);
+    Socialite::shouldReceive('driver->user')->andReturn($googleUser);
+}
+
+it('links a Google login to an existing customer by email once', function () {
+    $customer = User::factory()->create(['email' => 'link@example.test', 'role' => UserRole::CUSTOMER, 'google_id' => null]);
+    fakeGoogleUser('google-123', 'link@example.test');
+
+    $this->get('/api/v1/auth/google/callback')->assertRedirect();
+
+    expect($customer->refresh()->google_id)->toBe('google-123')->and(User::count())->toBe(1);
+    $this->assertAuthenticatedAs($customer);
+});
+
+it('does not revive a deleted customer through Google login', function () {
+    $customer = User::factory()->create(['email' => 'blocked@example.test', 'role' => UserRole::CUSTOMER, 'google_id' => 'google-blocked']);
+    $customer->delete();
+    fakeGoogleUser('google-blocked', 'blocked@example.test');
+
+    $this->get('/api/v1/auth/google/callback')->assertForbidden();
+
+    expect($customer->refresh()->trashed())->toBeTrue();
+    $this->assertGuest();
+});
+
+it('refuses an email already linked to a different Google account', function () {
+    $customer = User::factory()->create(['email' => 'taken@example.test', 'role' => UserRole::CUSTOMER, 'google_id' => 'google-original']);
+    fakeGoogleUser('google-other', 'taken@example.test');
+
+    $this->get('/api/v1/auth/google/callback')->assertForbidden();
+
+    expect($customer->refresh()->google_id)->toBe('google-original');
+    $this->assertGuest();
 });

@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useRef, useState} from "react";
+import React, {useEffect, useRef, useState} from "react";
 import {api, isBackendUnavailable} from "../api";
 import {rupiah} from "../data";
 import RegionFields from "../components/forms/RegionFields";
@@ -36,27 +36,8 @@ function Checkout({
     try { orderAttempt.current = JSON.parse(sessionStorage.getItem(attemptStorageKey)); } catch { /* Ignore invalid local state. */ }
   }
   const submittingOrder = useRef(false);
-  const selectedShipping =
-    shippingOptions.find((option) => option.service === shippingService) ||
-    shippingOptions[0] || {fee: 0};
-  const fallbackPricing = useMemo(() => {
-    const subtotal = cart.reduce(
-      (sum, item) => sum + item.product.price * item.qty,
-      0,
-    );
-    const voucherDiscount =
-      appliedVoucher.toUpperCase() === "GUTDEMO"
-        ? Math.min(50000, subtotal * 0.1)
-        : 0;
-    return {
-      subtotal,
-      product_discount: 0,
-      voucher_discount: voucherDiscount,
-      shipping_fee: Number(selectedShipping.fee || 0),
-      grand_total: subtotal + Number(selectedShipping.fee || 0) - voucherDiscount,
-    };
-  }, [cart, Number(selectedShipping.fee || 0), appliedVoucher]);
-  const shownPricing = pricing || (mode === "demo" ? fallbackPricing : null);
+  // Totals always come from the backend quote; there is no client-side pricing.
+  const shownPricing = pricing;
 
   const messageFor = (err, fallback) => {
     const fieldMessage = Object.values(err?.errors || {}).flat()[0];
