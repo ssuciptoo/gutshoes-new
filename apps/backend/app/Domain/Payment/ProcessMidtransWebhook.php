@@ -57,10 +57,12 @@ class ProcessMidtransWebhook
             }, 3);
         } catch (Throwable $error) {
             // Audit is intentionally committed before business processing so failed
-            // amount/order/transaction validation remains observable.
+            // amount/order/transaction validation remains observable. Only a business
+            // rejection is final; infrastructure errors (deadlock, lock timeout) stay
+            // unprocessed so the Midtrans retry of the same event is applied.
             $event->update([
                 'processing_error' => mb_substr(class_basename($error).': '.$error->getMessage(), 0, 255),
-                'processed_at' => now(),
+                'processed_at' => $error instanceof DomainException ? now() : null,
             ]);
 
             throw $error;

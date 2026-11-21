@@ -53,8 +53,12 @@ class CreateOrderService
             if (! $quote instanceof ShippingQuote) {
                 throw new DomainException('Selected shipping service is unavailable.');
             }
-            $totals = $this->pricing->calculate($cart, $payload['voucher_code'] ?? null, $quote->fee);
+            // Lock the voucher before any limit check so concurrent checkouts serialize on it.
             $voucher = isset($payload['voucher_code']) ? Voucher::where('code', $payload['voucher_code'])->lockForUpdate()->first() : null;
+            $totals = $this->pricing->calculate($cart, $payload['voucher_code'] ?? null, $quote->fee);
+            if ($voucher) {
+                $this->pricing->assertVoucherUsable($voucher, $cart->user_id, $payload['customer']['email'], true);
+            }
             $order = Order::create([
                 'order_number' => $this->orderNumber(), 'user_id' => $cart->user_id, 'warehouse_id' => $warehouse->id, 'voucher_id' => $voucher?->id,
                 'customer_email' => $payload['customer']['email'], 'customer_name' => $payload['customer']['name'], 'customer_phone' => $payload['customer']['phone'],

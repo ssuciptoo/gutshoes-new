@@ -104,7 +104,7 @@ class AdminProductController extends Controller
         $validator = Validator::make($r->all(), ['brand_id' => ['required', 'integer', 'exists:brands,id'], 'name' => ['required', 'string', 'max:255'], 'slug' => ['required', 'alpha_dash', 'max:255', 'unique:products,slug,'.($p instanceof Product ? $p->id : 'NULL')],
             'description' => ['nullable', 'string', 'max:10000'], 'status' => ['sometimes', 'in:DRAFT,ARCHIVED'], 'category_ids' => ['required', 'array', 'min:1'], 'category_ids.*' => ['integer', 'exists:categories,id'],
             'variants' => ['required', 'array', 'min:1'], 'variants.*.id' => ['nullable', 'integer', 'exists:product_variants,id'], 'variants.*.size_id' => ['required', 'integer', 'distinct', 'exists:sizes,id'],
-            'variants.*.sku' => ['required', 'string', 'max:100', 'distinct:ignore_case'], 'variants.*.price' => ['required', 'decimal:0,2', 'min:0'], 'variants.*.currency' => ['sometimes', 'string', 'size:3'],
+            'variants.*.sku' => ['required', 'string', 'max:100', 'distinct:ignore_case'], 'variants.*.price' => ['required', 'decimal:0,2', 'min:0', 'regex:/^\d+(\.0{1,2})?$/'], 'variants.*.currency' => ['sometimes', 'string', 'size:3'],
             'variants.*.weight_grams' => ['required', 'integer', 'min:1', 'max:100000'], 'variants.*.is_active' => ['sometimes', 'boolean']]);
 
         $validator->after(function ($validator) use ($r, $p): void {

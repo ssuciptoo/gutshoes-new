@@ -38,6 +38,9 @@ class FakeMidtransProvider implements MidtransProvider
 
     public function verifyWebhook(array $payload): bool
     {
+        if (blank(config('services.midtrans.server_key'))) {
+            return false;
+        }
         $expected = hash('sha512', ($payload['order_id'] ?? '').($payload['status_code'] ?? '').($payload['gross_amount'] ?? '').config('services.midtrans.server_key'));
 
         return isset($payload['signature_key']) && is_string($payload['signature_key']) && hash_equals($expected, $payload['signature_key']);

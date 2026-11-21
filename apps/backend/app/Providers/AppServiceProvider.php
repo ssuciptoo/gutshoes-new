@@ -28,12 +28,17 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        $this->app->bind(RefundProvider::class, fn () => config('services.midtrans.driver') === 'http'
-            ? new HttpRefundProvider
-            : new FakeRefundProvider);
-        $this->app->bind(MidtransProvider::class, fn () => config('services.midtrans.driver') === 'http'
-            ? new HttpMidtransProvider
-            : new FakeMidtransProvider);
+        // Fake Midtrans accepts webhooks signed with an empty key and fakes refunds; never allow it on real deployments.
+        $realMidtrans = function (): bool {
+            $http = config('services.midtrans.driver') === 'http';
+            if ($this->app->environment(['production', 'staging']) && (! $http || blank(config('services.midtrans.server_key')))) {
+                throw new \RuntimeException('MIDTRANS_DRIVER=http and MIDTRANS_SERVER_KEY are required in production and staging.');
+            }
+
+            return $http;
+        };
+        $this->app->bind(RefundProvider::class, fn () => $realMidtrans() ? new HttpRefundProvider : new FakeRefundProvider);
+        $this->app->bind(MidtransProvider::class, fn () => $realMidtrans() ? new HttpMidtransProvider : new FakeMidtransProvider);
         $this->app->bind(ShippingProvider::class, fn () => match (config('gutshoes.shipping_driver')) {
             'biteship' => new BiteshipShippingProvider,
             'rajaongkir' => new RajaOngkirShippingProvider,

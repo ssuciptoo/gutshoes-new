@@ -4,72 +4,80 @@
 
 | Environment | Provider | Transport |
 | --- | --- | --- |
-| Development | Google SMTP akun pribadi | Laravel SMTP |
-| Staging | Google SMTP akun pribadi | Laravel SMTP |
-| Production | Resend | Resend SMTP |
+| Development | Brevo | Laravel SMTP |
+| Staging | Brevo | Laravel SMTP |
+| Production | Ditentukan sebelum go-live | Laravel SMTP/API sesuai provider |
 
 Seluruh email dikirim melalui Laravel Mail dari SendOrderEmail. Domain order, payment, shipping, dan recovery guest tidak mengetahui provider aktif. Pergantian provider cukup melalui environment variable.
 
-## Google SMTP development dan staging
+## Brevo SMTP development dan staging
 
-Gunakan akun khusus staging. Aktifkan 2-Step Verification dan buat App Password khusus GutShoes.
+Gunakan SMTP key dari Brevo, bukan password login akun Brevo. Sender email harus sudah ditambahkan dan diverifikasi di dashboard Brevo.
 
 ```dotenv
 MAIL_MAILER=smtp
-MAIL_HOST=smtp.gmail.com
+MAIL_HOST=smtp-relay.brevo.com
 MAIL_PORT=587
-MAIL_USERNAME=gutshoes.staging@gmail.com
-MAIL_PASSWORD=google-app-password
+MAIL_USERNAME=alamat-email-akun-brevo
+MAIL_PASSWORD=brevo-smtp-key
 MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=gutshoes.staging@gmail.com
+MAIL_FROM_ADDRESS=no-reply@domain-anda.com
 MAIL_FROM_NAME="GutShoes Staging"
 ```
 
-App Password disimpan di secret manager atau environment host. Jika password akun Google berubah, uji ulang karena App Password dapat dicabut.
+SMTP key disimpan sebagai secret environment di komputer lokal atau hosting. Jangan commit key ke repository dan jangan mencatatnya ke log.
 
-## Resend SMTP produksi
+Jika belum memiliki domain sendiri, sender email Brevo dapat diverifikasi untuk smoke test. Untuk staging online dan production, lebih baik gunakan domain sendiri agar SPF, DKIM, DMARC, dan reputasi pengiriman dapat dikontrol.
 
-Verifikasi domain pengirim di Resend dan pasang SPF/DKIM yang diberikan. Gunakan subdomain transaksional, misalnya mail.gutshoes.id.
+Autentikasi domain dilakukan di Brevo melalui menu domain. Gunakan domain atau subdomain khusus email, misalnya `mail.gutshoes.id`, lalu pasang record DNS SPF/DKIM/DMARC yang diberikan Brevo.
+
+Domain yang dipakai pada `MAIL_FROM_ADDRESS` harus sama dengan domain sender yang telah diverifikasi.
+
+## Queue dan pengiriman
+
+Job `SendOrderEmail` menggunakan queue. Untuk development dan staging awal, queue database dapat digunakan:
 
 ```dotenv
-MAIL_MAILER=smtp
-MAIL_HOST=smtp.resend.com
-MAIL_PORT=587
-MAIL_USERNAME=resend
-MAIL_PASSWORD=resend-api-key
-MAIL_ENCRYPTION=tls
-MAIL_FROM_ADDRESS=orders@mail.gutshoes.id
-MAIL_FROM_NAME="GutShoes"
+QUEUE_CONNECTION=database
 ```
 
-SMTP Resend tidak membutuhkan SDK. API key diperlakukan sebagai SMTP password dan hanya disimpan di secret manager produksi.
+Pastikan worker berjalan di server staging:
+
+```bash
+php artisan queue:work database --tries=3
+```
+
+Redis dan Horizon dapat digunakan ketika volume meningkat atau ketika diperlukan monitoring queue yang lebih lengkap. Worker harus dijalankan sebagai service yang otomatis restart, bukan hanya melalui terminal interaktif.
 
 ## Aturan operasional
 
-1. QUEUE_CONNECTION memakai Redis pada staging dan produksi.
-2. Horizon dan scheduler dijalankan oleh supervisor.
+1. SMTP key, `APP_KEY`, dan credential provider hanya disimpan di secret environment.
+2. Worker queue dan scheduler dijalankan sebagai service di staging dan produksi.
 3. Checkout tidak boleh gagal karena email gagal; job email memakai retry dan failed-job monitoring.
 4. Pantau email_deliveries, queue gagal, bounce, complaint, dan delivery rate.
-5. Jangan mencatat App Password, API key, atau token recovery guest.
+5. Jangan mencatat SMTP key, API key, password, atau token recovery guest.
 6. Smoke test ke Gmail dan provider lain sebelum deployment dinyatakan sehat.
-7. Produksi mengaktifkan webhook Resend untuk delivered, bounced, dan complained dengan verifikasi signature.
+7. Sebelum production, aktifkan autentikasi domain dan evaluasi webhook/status delivery dari provider yang dipilih.
 
 ## Checklist aktivasi
 
 ### Development/staging
 
-- akun Gmail khusus tersedia;
-- 2-Step Verification aktif;
-- App Password masuk secret environment;
+- akun Brevo tersedia;
+- sender email sudah diverifikasi;
+- SMTP key masuk secret environment;
 - queue worker berjalan;
-- email order created dan recovery guest diterima.
+- email order created, payment success, payment expired, dan recovery guest diterima;
+- status `email_deliveries` berubah menjadi `SENT`;
+- job gagal tercatat di `failed_jobs` dan dapat di-retry.
 
 ### Production
 
-- domain Resend terverifikasi;
+- provider email production sudah dipilih;
+- domain pengirim terverifikasi;
 - SPF dan DKIM valid, DMARC minimal mode observasi;
-- API key hanya memiliki izin yang diperlukan;
+- credential provider hanya memiliki izin yang diperlukan;
 - sender memakai domain terverifikasi;
-- webhook delivery/bounce/complaint aktif;
+- monitoring delivery/bounce/complaint aktif jika disediakan provider;
 - alert queue gagal dan email FAILED aktif;
 - recovery guest diuji setelah local storage browser dihapus.

@@ -2,6 +2,11 @@
 
 use App\Domain\Inventory\InventoryService;
 use App\Domain\Order\GuestOrderAccess;
+use App\Domain\Payment\ApplyMidtransStatus;
+use App\Domain\Payment\FakeMidtransProvider;
+use App\Domain\Payment\HttpMidtransProvider;
+use App\Domain\Payment\MidtransProvider;
+use App\Domain\Refund\RefundProvider;
 use App\Enums\UserRole;
 use App\Models\Inventory;
 use App\Models\Order;
@@ -136,4 +141,49 @@ it('processes success exactly once and ignores a later expiry event', function (
         ->and($order->payment->provider_status)->toBe('expire');
     expect(PaymentWebhook::count())->toBe(2);
     $this->assertDatabaseMissing('payment_webhooks', ['payload_redacted' => $payload['signature_key']]);
+});
+
+it('keeps a webhook retryable after a transient processing failure', function () {
+    ['order' => $order] = payableOrder();
+    $this->postJson("/api/v1/orders/{$order->order_number}/payment")->assertCreated();
+    $payload = midtransPayload($order, 'settlement');
+    $real = app(ApplyMidtransStatus::class);
+    $this->app->instance(ApplyMidtransStatus::class, new class($real) extends ApplyMidtransStatus
+    {
+        public bool $failed = false;
+
+        public function __construct(private readonly ApplyMidtransStatus $real) {}
+
+        public function apply(Order $order, Payment $payment, array $payload): void
+        {
+            if (! $this->failed) {
+                $this->failed = true;
+                throw new RuntimeException('Lock wait timeout exceeded');
+            }
+            $this->real->apply($order, $payment, $payload);
+        }
+    });
+
+    $this->postJson('/api/v1/payments/midtrans/webhook', $payload)->assertServerError();
+    expect(PaymentWebhook::first()->processed_at)->toBeNull()->and($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT');
+
+    $this->postJson('/api/v1/payments/midtrans/webhook', $payload)->assertOk();
+    expect(PaymentWebhook::first()->processed_at)->not->toBeNull()->and($order->refresh()->getRawOriginal('status'))->toBe('PAID');
+});
+
+it('refuses the fake Midtrans driver or an empty server key in production', function (string $driver, ?string $key) {
+    config(['services.midtrans.driver' => $driver, 'services.midtrans.server_key' => $key]);
+    $this->app->detectEnvironment(fn () => 'production');
+
+    expect(fn () => app(MidtransProvider::class))->toThrow(RuntimeException::class)
+        ->and(fn () => app(RefundProvider::class))->toThrow(RuntimeException::class);
+})->with([['fake', 'test-server-key'], ['http', null]]);
+
+it('rejects webhook signatures when no server key is configured', function () {
+    config(['services.midtrans.server_key' => null]);
+    $payload = ['order_id' => 'GS-X', 'status_code' => '200', 'gross_amount' => '1.00'];
+    $payload['signature_key'] = hash('sha512', 'GS-X2001.00');
+
+    expect(app(FakeMidtransProvider::class)->verifyWebhook($payload))->toBeFalse()
+        ->and(app(HttpMidtransProvider::class)->verifyWebhook($payload))->toBeFalse();
 });

@@ -5,10 +5,12 @@ use App\Domain\Shipping\RegionAddressResolver;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Inventory;
+use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Promotion;
 use App\Models\Voucher;
+use App\Models\VoucherUsage;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -99,4 +101,48 @@ it('maps internal regions to the provider area id on the server', function () {
 
     expect($address['provider_area_id'])->toBe('ID-BITESHIP-12345');
     Http::assertSent(fn ($request) => $request->hasHeader('Authorization', 'secret') && str_contains($request->url(), '/v1/maps/areas'));
+});
+
+it('keeps percentage discounts in whole rupiah so Midtrans amounts match', function () {
+    $product = Product::factory()->create();
+    $variant = ProductVariant::factory()->create(['product_id' => $product->id, 'price' => '199999.00']);
+    $cart = Cart::create(['guest_token' => fake()->uuid(), 'status' => 'ACTIVE']);
+    CartItem::create(['cart_id' => $cart->id, 'product_variant_id' => $variant->id, 'quantity' => 1]);
+    Promotion::create(['name' => 'Fifteen', 'type' => 'PERCENTAGE', 'value' => '15.00', 'priority' => 1, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true])->products()->attach($product);
+    Voucher::create(['code' => 'SEVEN', 'name' => 'Seven', 'type' => 'PERCENTAGE', 'value' => '7.00', 'minimum_amount' => '0.00', 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+
+    $result = app(PricingService::class)->calculate($cart, 'SEVEN', '20000.00');
+
+    // 199999 x 15% = 29999.85 -> 30000; (199999 - 30000) x 7% = 11899.93 -> 11900.
+    expect($result['product_discount'])->toBe('30000.00')->and($result['items'][0]['line_total'])->toBe('169999.00')
+        ->and($result['voucher_discount'])->toBe('11900.00')->and($result['grand_total'])->toBe('178099.00');
+});
+
+function voucherOrder(string $status, ?int $userId = null, string $email = 'buyer@example.test'): Order
+{
+    return Order::create(['order_number' => 'GS-V-'.fake()->unique()->numerify('######'), 'user_id' => $userId, 'warehouse_id' => Warehouse::factory()->create()->id,
+        'customer_email' => $email, 'customer_name' => 'Buyer', 'customer_phone' => '08123', 'status' => $status,
+        'subtotal' => '100000.00', 'product_discount' => '0.00', 'voucher_discount' => '10000.00', 'shipping_fee' => '0.00',
+        'grand_total' => '90000.00', 'currency' => 'IDR', 'idempotency_key' => fake()->uuid(), 'payload_hash' => str_repeat('a', 64), 'expires_at' => now()->addDay()]);
+}
+
+it('frees voucher usage held by expired or cancelled orders', function () {
+    $voucher = Voucher::create(['code' => 'ONCE', 'name' => 'Once', 'type' => 'FIXED_AMOUNT', 'value' => '10000.00', 'minimum_amount' => '0.00', 'usage_limit' => 1, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    foreach (['EXPIRED', 'CANCELLED'] as $status) {
+        VoucherUsage::create(['voucher_id' => $voucher->id, 'order_id' => voucherOrder($status)->id, 'discount_amount' => '10000.00']);
+    }
+    $pricing = app(PricingService::class);
+    $pricing->assertVoucherUsable($voucher, null, 'other@example.test');
+
+    VoucherUsage::create(['voucher_id' => $voucher->id, 'order_id' => voucherOrder('PENDING_PAYMENT')->id, 'discount_amount' => '10000.00']);
+    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'other@example.test'))->toThrow(DomainException::class, 'Voucher usage limit reached.');
+});
+
+it('enforces the per-customer voucher limit by account and email', function () {
+    $voucher = Voucher::create(['code' => 'PERUSER', 'name' => 'Per user', 'type' => 'FIXED_AMOUNT', 'value' => '10000.00', 'minimum_amount' => '0.00', 'usage_limit_per_user' => 1, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    VoucherUsage::create(['voucher_id' => $voucher->id, 'order_id' => voucherOrder('PAID', null, 'repeat@example.test')->id, 'discount_amount' => '10000.00']);
+    $pricing = app(PricingService::class);
+
+    $pricing->assertVoucherUsable($voucher, null, 'fresh@example.test');
+    expect(fn () => $pricing->assertVoucherUsable($voucher, null, 'repeat@example.test'))->toThrow(DomainException::class, 'per customer');
 });
