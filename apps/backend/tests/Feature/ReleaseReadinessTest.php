@@ -67,3 +67,22 @@ it('retries an order email without delivering it twice', function () {
     $job->handle();
     expect(EmailDelivery::count())->toBe(1)->and(EmailDelivery::first()->attempts)->toBe(1);
 });
+
+it('renders a clean order email with HTML and plain text versions', function () {
+    config(['mail.default' => 'array', 'services.storefront.url' => 'https://toko.test']);
+    $warehouse = Warehouse::factory()->create();
+    $customer = App\Models\User::factory()->create();
+    $order = Order::create(['order_number' => 'GS-MAIL-0002', 'user_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'customer_email' => 'mail2@example.test', 'customer_name' => 'Rina', 'customer_phone' => '08123',
+        'status' => 'PENDING_PAYMENT', 'subtotal' => '449000.00', 'product_discount' => '0.00', 'voucher_discount' => '0.00', 'shipping_fee' => '8000.00', 'grand_total' => '457000.00',
+        'currency' => 'IDR', 'idempotency_key' => 'mail-key-0000000002', 'payload_hash' => str_repeat('f', 64), 'expires_at' => '2026-11-24 08:01:02']);
+
+    (new SendOrderEmail($order->id, 'order_created'))->handle();
+
+    $message = app('mailer')->getSymfonyTransport()->messages()->first()->getOriginalMessage();
+    $html = $message->getHtmlBody();
+    $text = $message->getTextBody();
+    expect($message->getSubject())->toBe('Pesanan GS-MAIL-0002 menunggu pembayaran')
+        ->and($html)->toContain('Pesananmu sudah kami terima', 'Rp457.000', '24 November 2026, 15.01 WIB', 'https://toko.test/#order-detail/GS-MAIL-0002')
+        ->and($html)->not->toContain('Status email', 'PENDING')
+        ->and($text)->toContain('Total: Rp457.000', 'Lihat pesanan & bayar: https://toko.test/#order-detail/GS-MAIL-0002');
+});

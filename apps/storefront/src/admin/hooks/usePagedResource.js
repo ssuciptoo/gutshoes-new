@@ -3,10 +3,13 @@ import {serverList, serverMeta} from "../lib/helpers";
 
 // Listing admin dengan pencarian, filter, dan halaman di sisi server.
 // loader menerima params ({page, per_page, search, ...}) dan mengembalikan respons API.
-function usePagedResource(loader, {perPage = 25, filterParam = "status", extraParams = {}} = {}) {
-  const [query, setQueryState] = useState("");
-  const [search, setSearch] = useState("");
-  const [filter, setFilterState] = useState("");
+function usePagedResource(
+  loader,
+  {perPage = 25, filterParam = "status", extraParams = {}, initialQuery = "", initialFilter = ""} = {},
+) {
+  const [query, setQueryState] = useState(initialQuery);
+  const [search, setSearch] = useState(initialQuery.trim());
+  const [filter, setFilterState] = useState(initialFilter);
   const [page, setPage] = useState(1);
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState({
@@ -54,7 +57,7 @@ function usePagedResource(loader, {perPage = 25, filterParam = "status", extraPa
           setState((previous) => ({
             ...previous,
             loading: false,
-            error: error.message || "Server admin tidak dapat dijangkau.",
+            error: error.message || "Data belum dapat dimuat. Coba lagi sebentar lagi.",
           }));
       });
     return () => {

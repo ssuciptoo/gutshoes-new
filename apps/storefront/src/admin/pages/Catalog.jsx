@@ -51,7 +51,7 @@ function CatalogPage() {
             <div className="adm-card-head">
               <div>
                 <h2>Kategori</h2>
-                <p>{resource.data.categories.length} kategori dari server</p>
+                <p>{resource.data.categories.length} kategori</p>
               </div>
               <button onClick={() => open("category")}>
                 <Icon name="plus" /> Tambah
@@ -89,7 +89,7 @@ function CatalogPage() {
             <div className="adm-card-head">
               <div>
                 <h2>Merek</h2>
-                <p>{resource.data.brands.length} merek dari server</p>
+                <p>{resource.data.brands.length} merek</p>
               </div>
               <button onClick={() => open("brand")}>
                 <Icon name="plus" /> Tambah

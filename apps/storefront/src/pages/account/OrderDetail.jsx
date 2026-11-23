@@ -5,6 +5,7 @@ import AccountShell from "../../components/layout/AccountShell";
 import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import {REFUND_STATUS, canContinuePayment, courierLabel, formatDeadline, orderStatusLabel, paymentStatusLabel} from "../../lib/orderStatus";
 
 export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
   const [order, setOrder] = useState(null);
@@ -59,20 +60,23 @@ export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
     {!order && !error && <p role="status">Memuat pesanan…</p>}
     {order && <>
       <div className="order-detail-head"><div><h2>{order.order_number}</h2><p>{new Date(order.created_at).toLocaleString("id-ID")}</p></div>
-        <span className="order-state">{order.status}</span></div>
+        <span className="order-state">{orderStatusLabel(order.status)}</span></div>
+      {canContinuePayment(order) && <div className="order-pay-banner" role="status">
+        <p><strong>Selesaikan pembayaran sebelum {formatDeadline(order.expires_at)}.</strong> Pesanan otomatis dibatalkan bila belum dibayar.</p>
+        <Button onClick={pay} disabled={busy}>{busy ? "Membuka pembayaran…" : "Lanjutkan pembayaran"}</Button>
+      </div>}
       <section className="order-detail-block"><h3>Produk</h3>{order.items.map(item => <div className="order-product-line order-product-line--snapshot" key={item.id}>
         <span><strong>{item.product_name}</strong><small>{item.brand_name} · Ukuran {item.size_label} · {item.sku} · {item.quantity} barang</small></span>
         <strong>{rupiah(Number(item.line_total))}</strong>
       </div>)}</section>
       <div className="order-detail-columns"><section className="order-detail-block"><h3>Pengiriman</h3>
         <p>{address?.recipient_name}<br />{address?.address_line}<br />{address?.city} {address?.postal_code}</p>
-        <p>{order.shipment?.courier} · {order.shipment?.service}<br />Resi: {order.shipment?.tracking_number || "Belum tersedia"}</p>
-      </section><section className="order-detail-block"><h3>Pembayaran</h3><p>Status: {order.payment?.status || "Belum dimulai"}</p>
+        <p>{courierLabel(order.shipment?.courier, order.shipment?.service) || "Kurir belum dipilih"}<br />Resi: {order.shipment?.tracking_number || "Belum tersedia"}</p>
+      </section><section className="order-detail-block"><h3>Pembayaran</h3><p>Status: {paymentStatusLabel(order.payment?.status)}</p>
         <p>Subtotal {rupiah(Number(order.subtotal))}<br />Pengiriman {rupiah(Number(order.shipping_fee))}<br />
           Diskon {rupiah(Number(order.product_discount) + Number(order.voucher_discount))}<br />Total <strong>{rupiah(Number(order.grand_total))}</strong></p>
       </section></div>
-      {order.refunds?.map(refund => <section className="refund-card" key={refund.id}><h3>Refund {refund.status}</h3><p>{rupiah(Number(refund.amount))}</p></section>)}
-      {order.status === "PENDING_PAYMENT" && <Button onClick={pay} disabled={busy}>Lanjutkan pembayaran</Button>}
+      {order.refunds?.map(refund => <section className="refund-card" key={refund.id}><h3>Refund · {REFUND_STATUS[refund.status] || refund.status}</h3><p>{rupiah(Number(refund.amount))}</p></section>)}
       {["PENDING_PAYMENT", "PAID"].includes(order.status) && <div className="order-danger-zone"><p>Pembatalan tersedia sebelum pesanan mulai diproses.</p>
         <Button variant="secondary" disabled={busy} onClick={() => setConfirm(true)}>{busy ? "Memproses…" : "Ajukan pembatalan"}</Button></div>}
     </>}

@@ -220,6 +220,30 @@ it('cancels an uncharged Snap session before allowing release', function () {
     Http::assertSentCount(3);
 });
 
+it('sends Snap cancellation with basic auth', function () {
+    ['order' => $order] = payableOrder();
+    app(CreatePaymentService::class)->create($order);
+    Http::fake(['*/status' => Http::response(['status_code' => '404'], 404),
+        '*snap/v1/transactions/*/cancel' => Http::response(['canceled_at' => now()->toIso8601String()])]);
+    (new HttpMidtransProvider)->closeTransaction($order, 'cancel');
+    Http::assertSent(fn ($request) => str_ends_with($request->url(), '/cancel')
+        && $request->header('Authorization')[0] === 'Basic '.base64_encode(config('services.midtrans.server_key').':'));
+});
+
+it('treats an already expired Snap session as closed only after the payment deadline', function () {
+    ['order' => $order] = payableOrder();
+    app(CreatePaymentService::class)->create($order);
+    Http::fake(['*/status' => Http::response(['status_code' => '404'], 404),
+        '*snap/v1/transactions/*/cancel' => Http::response(['error_messages' => ['expiry must be greater than the current time']], 400)]);
+
+    // Batas bayar belum lewat: jangan anggap tertutup.
+    expect(fn () => (new HttpMidtransProvider)->closeTransaction($order->refresh(), 'expire'))
+        ->toThrow(RuntimeException::class, 'Snap session closure is not confirmed.');
+
+    $order->payment->update(['expires_at' => now()->subMinute()]);
+    expect((new HttpMidtransProvider)->closeTransaction($order->refresh(), 'expire')['transaction_status'])->toBe('cancel');
+});
+
 it('claims a guest cart once and revokes access to its former items', function () {
     ['cart' => $guest, 'payload' => $payload] = checkoutFixture();
     $owner = User::factory()->create();

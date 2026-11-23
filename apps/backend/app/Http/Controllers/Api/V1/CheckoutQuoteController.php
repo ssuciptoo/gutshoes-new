@@ -24,11 +24,13 @@ class CheckoutQuoteController extends Controller
         $warehouse = Warehouse::where('is_active', true)->firstOrFail();
         $weight = (int) $cart->items->sum(fn ($i) => $i->variant->weight_grams * $i->quantity);
         $quantity = (int) $cart->items->sum('quantity');
-        $quotes = $shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $destination, $weight, $quantity, $d['courier'] ?? null);
+        // Selalu ambil tarif semua kurir (di-cache) agar daftar pilihan tidak menyusut setelah memilih;
+        // layanan dipilih berdasarkan kurir + kode layanan karena kode seperti "REG" dipakai beberapa kurir.
+        $quotes = $shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $destination, $weight, $quantity);
         $selected = count($quotes) === 1 && $quotes[0]->service === 'REGIONAL_PER_ITEM'
             ? $quotes[0]
             : (filled($d['service'] ?? null)
-                ? collect($quotes)->first(fn ($q) => $q->service === $d['service'])
+                ? collect($quotes)->first(fn ($q) => $q->service === $d['service'] && (blank($d['courier'] ?? null) || strcasecmp($q->courier, (string) $d['courier']) === 0))
                 : collect($quotes)->sortBy(fn ($q) => (float) $q->fee)->first());
         abort_unless($selected instanceof ShippingQuote, 422, 'Layanan pengiriman yang dipilih tidak tersedia.');
 

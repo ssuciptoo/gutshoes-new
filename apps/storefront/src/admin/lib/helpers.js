@@ -28,6 +28,20 @@ const humanize = (code) =>
 export const statusLabel = (code) =>
   code ? STATUS[code]?.[0] || humanize(String(code)) : "Belum ada";
 export const statusTone = (code) => STATUS[code]?.[1] || "info";
+export const formatDateTime = (value) =>
+  value
+    ? new Date(value).toLocaleString("id-ID", {dateStyle: "medium", timeStyle: "short"})
+    : "—";
+// Status pesanan untuk admin, termasuk "lewat batas bayar" yang belum dibatalkan otomatis.
+export function orderStatusView(status, expiresAt) {
+  if (status === "PENDING_PAYMENT" && expiresAt) {
+    if (new Date(expiresAt).getTime() < Date.now()) {
+      return {label: "Lewat batas bayar", tone: "danger", hint: `Batas ${formatDateTime(expiresAt)}`};
+    }
+    return {label: statusLabel(status), tone: statusTone(status), hint: `Bayar sebelum ${formatDateTime(expiresAt)}`};
+  }
+  return {label: statusLabel(status), tone: statusTone(status), hint: ""};
+}
 // Opsi filter: [value, label]; value "" berarti semua.
 export const statusOptions = (allLabel, codes) => [
   ["", allLabel],

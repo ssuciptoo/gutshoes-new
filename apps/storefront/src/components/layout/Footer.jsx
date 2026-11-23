@@ -19,27 +19,13 @@ function Footer() {
       <div>
         <strong>Bantuan</strong>
         <a href="#guest-orders">Pesanan terakhir saya</a>
-        <a href="#tracking">Lacak dengan nomor order</a>
-        <span
-          className="footer-pending"
-          aria-disabled="true"
-          title="Tersedia setelah backend layanan pelanggan terhubung"
-        >
-          Pembatalan & refund · segera
-        </span>
-        <span
-          className="footer-pending"
-          aria-disabled="true"
-          title="Tersedia setelah kanal layanan pelanggan terhubung"
-        >
-          Hubungi kami · segera
-        </span>
+        <a href="#tracking">Lacak pesanan</a>
       </div>
       <div>
-        <strong>Catatan</strong>
-        <p>
-          Konten produk dan transaksi pada prototipe ini bersifat demonstrasi.
-        </p>
+        <strong>Akun</strong>
+        <a href="#orders">Riwayat & pembatalan pesanan</a>
+        <a href="#addresses">Alamat saya</a>
+        <a href="#profile">Profil</a>
       </div>
     </footer>
   );

@@ -22,11 +22,20 @@ return [
         'timeout' => (int) env('RAJAONGKIR_TIMEOUT', 30),
     ],
 
-    'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
-        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    // Login pelanggan lewat Clerk. Admin tetap memakai email + kata sandi (Sanctum).
+    'clerk' => [
+        'secret_key' => env('CLERK_SECRET_KEY'),
+        // URL Frontend API instance Clerk, mis. https://xxx.clerk.accounts.dev (nilai klaim "iss").
+        'frontend_api_url' => env('CLERK_FRONTEND_API_URL'),
+        // Opsional: kunci publik JWKS (PEM) dari dashboard agar verifikasi tanpa memanggil jaringan.
+        'jwt_key' => env('CLERK_JWT_KEY'),
+        // Signing secret webhook (whsec_…) dari Clerk Dashboard > Webhooks.
+        'webhook_secret' => env('CLERK_WEBHOOK_SECRET'),
+        'api_url' => env('CLERK_API_URL', 'https://api.clerk.com/v1'),
+        // Origin frontend yang boleh memakai token (klaim "azp"), dipisah koma.
+        'authorized_parties' => array_values(array_filter(array_map('trim', explode(',', (string) env('CLERK_AUTHORIZED_PARTIES', env('FRONTEND_URL', 'http://localhost:5173')))))),
     ],
+
     'postmark' => ['key' => env('POSTMARK_API_KEY')],
     'resend' => ['key' => env('RESEND_API_KEY')],
     'ses' => [

@@ -10,6 +10,21 @@ import Icon from "../components/Icon";
 import PageHead from "../components/PageHead";
 import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
+import useDialogFocus from "../hooks/useDialogFocus";
+import useUnsavedGuard from "../hooks/useUnsavedGuard";
+
+// Drawer editor stok: Esc/klik luar menutup, fokus dikunci, perubahan belum tersimpan dikonfirmasi.
+function StockDrawer({dirty, onClose, children}) {
+  const requestClose = useUnsavedGuard(dirty, onClose);
+  const dialogRef = useDialogFocus(requestClose);
+  return (
+    <div className="adm-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && requestClose()}>
+      <aside ref={dialogRef} className="adm-drawer adm-inventory-editor" role="dialog" aria-modal="true" aria-labelledby="inventory-editor-title">
+        {children(requestClose)}
+      </aside>
+    </div>
+  );
+}
 
 const MOVEMENT_TYPES = {
   ADD: "Stok masuk",
@@ -71,7 +86,7 @@ function InventoryPage() {
   }));
 
   const openCreate = () => {
-    setEditor({mode: "create"});
+    setEditor({mode: "create", snapshot: JSON.stringify(emptyCreate)});
     setForm(emptyCreate);
     setMovements([]);
     setError("");
@@ -79,7 +94,7 @@ function InventoryPage() {
   };
 
   const openEdit = async (item) => {
-    setEditor({mode: "edit", item});
+    setEditor({mode: "edit", item, snapshot: JSON.stringify({delta: "", reason: ""})});
     setForm({delta: "", reason: ""});
     setMovements([]);
     setError("");
@@ -177,11 +192,11 @@ function InventoryPage() {
         </section>
       )}
       {editor && (
-        <div className="adm-overlay" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && close()}>
-          <aside className="adm-drawer adm-inventory-editor" role="dialog" aria-modal="true" aria-labelledby="inventory-editor-title">
+        <StockDrawer dirty={!saving && JSON.stringify(form) !== editor.snapshot} onClose={close}>
+          {(requestClose) => (<>
             <header>
               <div><small>{editor.mode === "create" ? "STOK BARU" : "KELOLA STOK"}</small><h2 id="inventory-editor-title">{editor.mode === "create" ? "Daftarkan stok varian" : editor.item.sku}</h2></div>
-              <button onClick={close} aria-label="Tutup editor"><Icon name="close" /></button>
+              <button onClick={requestClose} aria-label="Tutup editor"><Icon name="close" /></button>
             </header>
             <form onSubmit={submit} aria-busy={saving}>
               <div className="adm-inventory-form-body">
@@ -230,12 +245,12 @@ function InventoryPage() {
 
               <footer>
                 {editor.mode === "edit" && Number(editor.item.on_hand) === 0 && Number(editor.item.reserved) === 0 && Number(editor.item.sold) === 0 && movements.length === 0 && <button className="adm-delete-link" type="button" onClick={destroy}>Hapus record stok</button>}
-                <Button kind="secondary" type="button" onClick={close}>Batal</Button>
+                <Button kind="secondary" type="button" onClick={requestClose}>Batal</Button>
                 <Button type="submit" disabled={saving || optionsLoading || (editor.mode === "edit" && Number(form.delta) === 0)}>{saving ? "Menyimpan…" : editor.mode === "create" ? "Daftarkan stok" : "Simpan perubahan"}</Button>
               </footer>
             </form>
-          </aside>
-        </div>
+          </>)}
+        </StockDrawer>
       )}
     </>
   );

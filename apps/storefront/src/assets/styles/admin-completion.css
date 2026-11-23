@@ -646,8 +646,26 @@
   .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Status"]{order:1;grid-column:1/-1;margin-top:-4px}
   .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Status"]::before{display:none!important}
   .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="SKU"],.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Gudang"]{order:2;grid-column:span 2}
-  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Aksi"]{order:4
+  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Aksi"]{order:4}
 }
 @media(min-width:621px) and (max-width:900px){.admin-app .adm-inventory-table.adm-card-table--wide tbody tr{grid-template-columns:2fr 2fr 1fr 1fr 1fr 1fr}.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="SKU"],.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Gudang"]{grid-column:span 1}}
 .adm-table-wrap code{white-space:nowrap}
 @media(min-width:721px) and (max-width:900px){.admin-app .adm-table-wrap .adm-responsive-table{min-width:0}.admin-app .adm-table-wrap .adm-responsive-table th,.admin-app .adm-table-wrap .adm-responsive-table td{padding-inline:10px}}
+.adm-detail-list{margin:0;display:grid;gap:8px;font-size:.8rem}
+.adm-detail-list>div{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;align-items:center}
+.adm-detail-list dt{color:var(--adm-muted)}
+.adm-detail-list dd{margin:0;overflow-wrap:anywhere}
+.adm-text-danger{color:var(--adm-danger);font-weight:700}
+.adm-timeline{list-style:none;margin:0;padding:0 0 0 16px;border-left:2px solid var(--adm-line);display:grid;gap:14px}
+.adm-timeline li{position:relative;display:flex;flex-direction:column;gap:2px;font-size:.8rem}
+.adm-timeline li::before{content:"";position:absolute;left:-22px;top:4px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--adm-action)}
+.adm-timeline small{color:var(--adm-muted);font-size:.7rem}
+.adm-timeline span{color:#586771;font-size:.74rem}
+.adm-overdue-alert{margin-bottom:18px;justify-content:space-between;flex-wrap:wrap;background:#e5f5fa;color:#0b5f7c;font-weight:500}
+.adm-overdue-alert strong{font-weight:800}
+.adm-overdue-alert button{border:1px solid #9fd6e8;background:#fff;border-radius:7px;min-height:36px;padding:0 12px;font-weight:750;color:#0b5f7c}
+.adm-recent-orders li{position:relative}
+.adm-recent-link{position:absolute;inset:0;border:0;background:transparent;cursor:pointer;z-index:1}
+.adm-recent-link:hover{background:rgba(0,125,169,.04)}
+.adm-recent-link:focus-visible{outline:3px solid #8fe7f7;outline-offset:-3px}
+.adm-order-link{padding:0;min-height:0!important;text-align:left;font-size:.8rem}

@@ -2,6 +2,7 @@ import React, {useEffect, useState} from "react";
 import {api} from "../../api";
 import {apiErrorMessage, serverList} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
+import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
 
@@ -41,7 +42,6 @@ function initialForm(kind, item) {
 function PromotionEditor({kind, item, onClose, onSaved}) {
   const isVoucher = kind === "voucher";
   const label = isVoucher ? "voucher" : "promosi";
-  const dialogRef = useDialogFocus(onClose);
   const [form, setForm] = useState(() => initialForm(kind, item));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -121,11 +121,15 @@ function PromotionEditor({kind, item, onClose, onSaved}) {
     ? [["PERCENTAGE", "Persentase (%)"], ["FIXED_AMOUNT", "Potongan nominal (Rp)"], ["FREE_SHIPPING", "Gratis ongkir"]]
     : [["PERCENTAGE", "Persentase (%)"], ["FIXED_AMOUNT", "Potongan nominal (Rp)"]];
 
+  // Snapshot awal form untuk mendeteksi perubahan yang belum disimpan.
+  const [snapshot] = useState(() => JSON.stringify(form));
+  const requestClose = useUnsavedGuard(!saving && JSON.stringify(form) !== snapshot, onClose);
+  const dialogRef = useDialogFocus(requestClose);
   return (
     <div
       className="adm-overlay"
       role="presentation"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
     >
       <aside
         ref={dialogRef}
@@ -141,7 +145,7 @@ function PromotionEditor({kind, item, onClose, onSaved}) {
               {form.id ? form.code || form.name : `Tambah ${label}`}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Tutup editor">
+          <button onClick={requestClose} aria-label="Tutup editor">
             <Icon name="close" />
           </button>
         </header>
@@ -305,7 +309,7 @@ function PromotionEditor({kind, item, onClose, onSaved}) {
                 Hapus {label}
               </button>
             )}
-            <Button kind="secondary" type="button" onClick={onClose}>
+            <Button kind="secondary" type="button" onClick={requestClose}>
               Tutup
             </Button>
             <Button type="submit" disabled={saving}>

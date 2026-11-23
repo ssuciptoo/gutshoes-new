@@ -1,23 +1,44 @@
 import React, {useState} from "react";
+import {api} from "../../api";
 import AccountShell from "../../components/layout/AccountShell";
 import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";
 import Icon from "../../components/ui/Icon";
+import {formatAccountDate} from "../../lib/format";
+
+// Nama bawaan untuk akun yang mendaftar lewat email tanpa mengisi nama.
+const DEFAULT_NAME = "Pelanggan GutShoes";
 
 function Profile({user, setUser, navigate, onLogout}) {
-  const [name, setName] = useState(user.name);
+  const [name, setName] = useState(user.name === DEFAULT_NAME ? "" : user.name);
   const [phone, setPhone] = useState(user.phone);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState("");
-  const submit = (e) => {
+  const [error, setError] = useState("");
+  const needsName = user.name === DEFAULT_NAME;
+
+  const submit = async (e) => {
     e.preventDefault();
-    setUser({
-      ...user,
-      name: name.trim(),
-      phone: phone.trim(),
-      updated: "22 Agustus 2026, 16.10 WIB",
-    });
-    setSaved("Perubahan profil tersimpan di sesi demo ini.");
+    if (saving) return;
+    setSaving(true);
+    setSaved("");
+    setError("");
+    try {
+      const response = await api.updateProfile({name: name.trim(), phone: phone.trim()});
+      setUser({
+        ...user,
+        name: name.trim(),
+        phone: response.data?.phone ?? phone.trim(),
+        updated_at: response.data?.updated_at || new Date().toISOString(),
+      });
+      setSaved("Perubahan profil tersimpan.");
+    } catch (requestError) {
+      setError(requestError.message || "Profil belum dapat disimpan. Coba lagi.");
+    } finally {
+      setSaving(false);
+    }
   };
+
   return (
     <AccountShell
       active="profile"
@@ -31,10 +52,15 @@ function Profile({user, setUser, navigate, onLogout}) {
           <p>Informasi kontak untuk pembaruan dan pemenuhan pesanan.</p>
         </div>
         <span className="account-status">
-          <Icon name="check" /> Terhubung ke Google · demo
+          <Icon name="check" /> Email terverifikasi
         </span>
       </div>
-      <form className="profile-form" onSubmit={submit}>
+      {needsName && (
+        <Feedback type="info">
+          Lengkapi nama lengkapmu agar kurir dan tim kami mudah mengenali pesananmu.
+        </Feedback>
+      )}
+      <form className="profile-form" onSubmit={submit} aria-busy={saving}>
         <label>
           Nama lengkap
           <input
@@ -46,9 +72,9 @@ function Profile({user, setUser, navigate, onLogout}) {
           />
         </label>
         <label>
-          Email Google
+          Email
           <input disabled value={user.email} />
-          <small>Email adalah identitas utama dan tidak dapat diubah.</small>
+          <small>Email dipakai untuk masuk dan menerima info pesanan.</small>
         </label>
         <label>
           Nomor telepon
@@ -63,14 +89,17 @@ function Profile({user, setUser, navigate, onLogout}) {
         </label>
         <div className="profile-meta">
           <span>
-            Akun dibuat<strong>{user.created}</strong>
+            Akun dibuat<strong>{formatAccountDate(user.created_at)}</strong>
           </span>
           <span>
-            Terakhir diperbarui<strong>{user.updated}</strong>
+            Terakhir diperbarui<strong>{formatAccountDate(user.updated_at)}</strong>
           </span>
         </div>
         <Feedback type="success">{saved}</Feedback>
-        <Button type="submit">Simpan perubahan</Button>
+        <Feedback>{error}</Feedback>
+        <Button type="submit" disabled={saving} aria-busy={saving}>
+          {saving ? "Menyimpan…" : "Simpan perubahan"}
+        </Button>
       </form>
     </AccountShell>
   );

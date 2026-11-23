@@ -16,12 +16,27 @@ class HttpMidtransProvider implements MidtransProvider
                 'transaction_details' => ['order_id' => $order->order_number, 'gross_amount' => (int) $order->grand_total],
                 'customer_details' => ['first_name' => $order->customer_name, 'email' => $order->customer_email, 'phone' => $order->customer_phone],
                 'expiry' => ['start_time' => Carbon::parse($order->expires_at)->subHours(24)->format('Y-m-d H:i:s O'), 'unit' => 'hours', 'duration' => 24],
+                // Setelah bayar/menutup halaman Midtrans, pembeli kembali ke pesanannya di toko.
+                'callbacks' => ['finish' => $this->finishUrl($order)],
             ])->throw()->json();
         if (! is_array($response) || ! isset($response['token'], $response['redirect_url'])) {
             throw new RuntimeException('Invalid Midtrans Snap response.');
         }
 
         return ['token' => (string) $response['token'], 'redirect_url' => (string) $response['redirect_url'], 'transaction_id' => null];
+    }
+
+    /**
+     * Pelanggan berakun kembali ke detail pesanan; guest ke "Pesanan saya" di perangkatnya.
+     * Token akses guest sengaja tidak dimasukkan ke URL agar tidak terkirim ke pihak ketiga.
+     */
+    private function finishUrl(Order $order): string
+    {
+        $base = rtrim((string) config('services.storefront.url'), '/').'/';
+
+        return $order->user_id
+            ? $base.'#order-detail/'.rawurlencode($order->order_number)
+            : $base.'#guest-orders';
     }
 
     public function closeTransaction(Order $order, string $action): array
@@ -37,10 +52,17 @@ class HttpMidtransProvider implements MidtransProvider
             if (! $token) {
                 throw new RuntimeException('Payment initialization is uncertain; keep the reservation for reconciliation.');
             }
-            $snap = Http::withHeaders(['Authorization' => (string) config('services.midtrans.server_key')])
+            // Snap API memakai Basic auth (server key + ":"), sama seperti saat membuat transaksi.
+            $snap = Http::withBasicAuth((string) config('services.midtrans.server_key'), '')
                 ->acceptJson()->timeout(10)->post(rtrim((string) config('services.midtrans.snap_url'), '/').'/'.rawurlencode($token).'/cancel');
-            $alreadyClosed = in_array('token already canceled', (array) $snap->json('error_messages'), true);
-            if (! ($snap->successful() && $snap->json('canceled_at')) && ! $alreadyClosed) {
+            $messages = (array) $snap->json('error_messages');
+            $alreadyClosed = in_array('token already canceled', $messages, true);
+            // Sesi Snap yang sudah lewat masa berlakunya tidak bisa dibatalkan, tetapi juga tidak bisa
+            // dipakai membayar lagi. Hanya diterima bila batas bayar kita sendiri memang sudah lewat.
+            $paymentDeadline = $order->payment?->expires_at ?? $order->expires_at;
+            $sessionExpired = in_array('expiry must be greater than the current time', $messages, true)
+                && $paymentDeadline !== null && Carbon::parse($paymentDeadline)->isPast();
+            if (! ($snap->successful() && $snap->json('canceled_at')) && ! $alreadyClosed && ! $sessionExpired) {
                 throw new RuntimeException('Snap session closure is not confirmed.');
             }
             // A charge may have started while the Snap session was being closed.

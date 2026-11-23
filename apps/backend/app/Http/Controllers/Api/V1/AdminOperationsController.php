@@ -45,8 +45,11 @@ class AdminOperationsController extends Controller
                 'currency' => 'IDR',
             ],
             'operations' => [
-                'payments_pending' => Payment::where('status', 'PENDING')->count(),
-                'shipments_pending' => Shipment::whereIn('status', ['PENDING', 'READY_TO_SHIP'])->count(),
+                // Belum dibayar tetapi sudah lewat batas waktu: menunggu job kedaluwarsa (scheduler).
+                'payments_overdue' => Order::where('status', 'PENDING_PAYMENT')->where('expires_at', '<', now())->count(),
+                // Hanya pengiriman milik pesanan yang sudah dibayar yang perlu ditangani tim.
+                'shipments_pending' => Shipment::whereIn('status', ['PENDING', 'READY'])
+                    ->whereHas('order', fn (Builder $q) => $q->whereIn('status', ['PAID', 'PROCESSING']))->count(),
                 'refunds_pending' => Refund::whereIn('status', ['PENDING', 'FAILED'])->count(),
             ],
             'recent_orders' => Order::query()->with('payment:id,order_id,status')->latest()->limit(5)
@@ -57,12 +60,19 @@ class AdminOperationsController extends Controller
 
     public function orders(Request $request): JsonResponse
     {
-        return $this->listing(Order::query()->with(['payment', 'shipment']), $request, ['status', 'customer_email', 'order_number'], 'created_at', ['order_number', 'customer_name', 'customer_email']);
+        $query = Order::query()->with(['payment', 'shipment']);
+        if ($request->input('status') === 'OVERDUE') {
+            $query->where('status', 'PENDING_PAYMENT')->where('expires_at', '<', now());
+            $request->query->remove('status');
+        }
+
+        return $this->listing($query, $request, ['status', 'customer_email', 'order_number'], 'created_at', ['order_number', 'customer_name', 'customer_email']);
     }
 
     public function order(Order $order): JsonResponse
     {
-        return response()->json(['data' => $order->load(['items', 'addresses', 'payment', 'shipment', 'statusHistories'])]);
+        return response()->json(['data' => $order->load(['items', 'addresses', 'payment', 'shipment', 'refunds',
+            'statusHistories' => fn ($q) => $q->orderBy('created_at')->orderBy('id'), 'statusHistories.actor:id,name'])]);
     }
 
     public function payments(Request $request): JsonResponse

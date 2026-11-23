@@ -75,7 +75,7 @@ function AddressesV2({user, addresses, setAddresses, navigate, onLogout}) {
           : [...previous, next],
       );
       setEditing(null);
-      setNotice("Alamat tersimpan di server.");
+      setNotice("Alamat tersimpan.");
     } catch (e) {
       setNotice(e.message || "Alamat belum dapat disimpan.");
     }
@@ -86,7 +86,7 @@ function AddressesV2({user, addresses, setAddresses, navigate, onLogout}) {
       setAddresses((previous) =>
         previous.filter((address) => address.id !== removeId),
       );
-      setNotice("Alamat dihapus dari server.");
+      setNotice("Alamat dihapus.");
     } catch (e) {
       setNotice(e.message || "Alamat belum dapat dihapus.");
     } finally {
@@ -112,7 +112,7 @@ function AddressesV2({user, addresses, setAddresses, navigate, onLogout}) {
       setAddresses((previous) =>
         previous.map((x) => ({...x, isDefault: x.id === id})),
       );
-      setNotice("Alamat utama diperbarui di server.");
+      setNotice("Alamat utama diperbarui.");
     } catch (e) {
       setNotice(e.message || "Alamat utama belum dapat diperbarui.");
     }

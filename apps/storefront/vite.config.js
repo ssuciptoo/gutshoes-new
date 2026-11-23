@@ -28,6 +28,15 @@ export default defineConfig(({command, mode}) => {
         `VITE_API_URL must be the real HTTPS ${mode} API URL ending in /api/v1; replace the example host.`,
       );
     }
+
+    // Login pelanggan memakai Clerk: production wajib kunci live, staging boleh kunci test.
+    const clerkKey = env.VITE_CLERK_PUBLISHABLE_KEY || "";
+    const expectedPrefix = mode === "production" ? "pk_live_" : "pk_";
+    if (!clerkKey.startsWith(expectedPrefix)) {
+      throw new Error(
+        `Set VITE_CLERK_PUBLISHABLE_KEY in .env.${mode} to the Clerk ${mode === "production" ? "live (pk_live_…)" : ""} publishable key.`,
+      );
+    }
   }
 
   return {plugins: [react()]};

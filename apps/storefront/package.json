@@ -11,6 +11,8 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@clerk/localizations": "4.24.6",
+    "@clerk/react": "6.18.6",
     "@fontsource-variable/manrope": "^5.2.5",
     "@radix-ui/react-popover": "^1.1.23",
     "@vitejs/plugin-react": "^5.0.2",

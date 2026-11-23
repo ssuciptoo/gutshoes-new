@@ -7,6 +7,13 @@ import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 import OrderSummary from "../components/checkout/OrderSummary";
 
+// Satu pilihan pengiriman = kurir + kode layanan, mis. "sicepat:REG".
+const shippingKey = (option) => (option ? `${option.courier || ""}:${option.service || ""}` : "");
+const splitShippingKey = (key = "") => {
+  const index = key.indexOf(":");
+  return index === -1 ? ["", key] : [key.slice(0, index), key.slice(index + 1)];
+};
+
 function Checkout({
   cart,
   navigate,
@@ -49,16 +56,19 @@ function Checkout({
       ?.querySelector('[aria-invalid="true"], input:invalid, textarea:invalid')
       ?.focus();
   }, [error, invalidFields, step]);
-  const quotePayload = (service = shippingService, code = appliedVoucher) => ({
+  const quotePayload = (selection = shippingService, code = appliedVoucher) => {
+    const [courier, service] = splitShippingKey(selection);
+    return {
     destination_area_id: buyer?.village_code || "destination",
     province_code: buyer?.province_code,
     regency_code: buyer?.regency_code,
     district_code: buyer?.district_code,
     village_code: buyer?.village_code,
-    courier: shippingOptions.find((option) => option.service === service)?.courier || null,
+    courier: courier || null,
     service: service || null,
     voucher_code: code || null,
-  });
+    };
+  };
   const validateQuote = async (
     service = shippingService,
     code = appliedVoucher,
@@ -81,7 +91,7 @@ function Checkout({
       });
       setServerShipping(response.data.shipping);
       setShippingOptions(response.data.shipping_options || [response.data.shipping]);
-      setShippingService(response.data.shipping.service);
+      setShippingService(shippingKey(response.data.shipping));
       setMode("api");
       setAppliedVoucher(code);
       return true;
@@ -91,7 +101,7 @@ function Checkout({
       setError(
         messageFor(
           err,
-          "Keranjang, alamat, ongkir, atau voucher ditolak backend. Periksa data lalu coba lagi.",
+          "Keranjang, alamat, ongkir, atau voucher belum valid. Periksa data lalu coba lagi.",
         ),
       );
       return false;
@@ -170,7 +180,7 @@ function Checkout({
       });
       setServerShipping(response.data.shipping);
       setShippingOptions(response.data.shipping_options || [response.data.shipping]);
-      setShippingService(response.data.shipping.service);
+      setShippingService(shippingKey(response.data.shipping));
       setMode("api");
       setStep(2);
     } catch (err) {
@@ -207,8 +217,8 @@ function Checkout({
       provider_area_id: buyer?.village_code,
     },
     shipping: {
-      courier: serverShipping?.courier || "jne",
-      service: serverShipping?.service || shippingService,
+      courier: serverShipping?.courier || splitShippingKey(shippingService)[0] || "jne",
+      service: serverShipping?.service || splitShippingKey(shippingService)[1],
     },
     voucher_code: appliedVoucher || null,
   };
@@ -336,13 +346,13 @@ function Checkout({
           <div className={`checkout-mode ${mode}`} role="status">
             <strong>
               {mode === "api"
-                ? "Terhubung ke API Laravel"
+                ? "Checkout aman"
                 : "Mode demo — tanpa transaksi nyata"}
             </strong>
             <span>
               {mode === "api"
-                ? "Nilai akhir divalidasi server."
-                : "Ongkir dan voucher hanya simulasi lokal."}
+                ? "Harga, ongkir, dan diskon dihitung ulang sebelum pesanan dibuat."
+                : "Ongkir dan voucher hanya simulasi."}
             </span>
           </div>
           {step === 1 && (
@@ -488,22 +498,22 @@ function Checkout({
                   shippingOptions.map((option) => (
                     <label
                       className={
-                        shippingService === option.service ? "selected" : ""
+                        shippingService === shippingKey(option) ? "selected" : ""
                       }
-                      key={option.service}
+                      key={shippingKey(option)}
                     >
                       <input
                         type="radio"
                         name="shipping"
-                        checked={shippingService === option.service}
-                        onChange={() => changeShipping(option.service)}
+                        checked={shippingService === shippingKey(option)}
+                        onChange={() => changeShipping(shippingKey(option))}
                         disabled={busy}
                       />
                       <Icon name="truck" />
                       <span>
                         <strong>{option.description || option.service}</strong>
                         <small>
-                          {option.estimated_days ? option.estimated_days + " hari" : "Estimasi mengikuti kurir"} {" / "} {option.courier.toUpperCase()} {option.service}
+                          {option.estimated_days ? `Estimasi ${option.estimated_days} hari` : "Estimasi mengikuti kurir"}
                         </small>
                       </span>
                       <b>
@@ -570,8 +580,8 @@ function Checkout({
               <h2>Metode pembayaran</h2>
               <p>
                 {mode === "api"
-                  ? "Order dibuat di Laravel sebelum sesi pembayaran Midtrans diinisiasi."
-                  : "Mode demo tidak akan membuka atau menginisiasi Midtrans."}
+                  ? "Pesananmu dibuat lebih dulu, lalu kamu diarahkan ke halaman pembayaran Midtrans."
+                  : "Mode demo tidak membuka halaman pembayaran."}
               </p>
               <div className="payment-choice selected">
                 <span className="midtrans-mark">M</span>
@@ -585,11 +595,11 @@ function Checkout({
                 <Icon name="check" />
               </div>
               <div className="review-box">
-                <h3>Konfirmasi berasal dari server</h3>
+                <h3>Pembayaran aman</h3>
                 <p>
-                  Stok dan total divalidasi lagi saat order dibuat. Hanya
-                  webhook Midtrans pada backend yang boleh mengubah pembayaran
-                  menjadi berhasil.
+                  Stok dan total diperiksa ulang saat pesanan dibuat. Status
+                  pembayaran berubah menjadi lunas setelah Midtrans
+                  mengonfirmasi pembayaranmu.
                 </p>
               </div>
               <Feedback>{error}</Feedback>
@@ -609,12 +619,12 @@ function Checkout({
                     aria-busy={busy}
                   >
                     {operation === "order" ? (
-                      "Membuat order…"
+                      "Membuat pesanan…"
                     ) : operation === "payment" ? (
-                      "Menginisiasi Midtrans…"
+                      "Menyiapkan pembayaran…"
                     ) : (
                       <>
-                        Buat order & lanjut bayar <Icon name="arrow" />
+                        Buat pesanan & lanjut bayar <Icon name="arrow" />
                       </>
                     )}
                   </Button>

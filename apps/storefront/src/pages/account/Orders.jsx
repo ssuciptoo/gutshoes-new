@@ -4,6 +4,7 @@ import {rupiah} from "../../data";
 import AccountShell from "../../components/layout/AccountShell";
 import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";
+import {canContinuePayment, formatDeadline, orderStatusLabel, paymentStatusLabel} from "../../lib/orderStatus";
 
 export default function Orders({user, navigate, onLogout}) {
   const [page, setPage] = useState(1);
@@ -26,9 +27,12 @@ export default function Orders({user, navigate, onLogout}) {
     {result && !result.data.length && <p>Belum ada pesanan.</p>}
     <div className="order-history">{result?.data.map(item => <article className="history-item" key={item.order_number}>
       <div><span>{new Date(item.created_at).toLocaleDateString("id-ID")}</span><h3>{item.order_number}</h3>
-        <p>{item.items?.map(product => product.product_name).join(", ")}</p><small>Pembayaran · {item.payment?.status || "Belum dimulai"}</small></div>
-      <div><strong>{rupiah(Number(item.grand_total))}</strong><span className="order-state">{item.status}</span>
-        <button className="text-link" onClick={() => navigate("order-detail", {orderNumber: item.order_number})}>Lihat detail</button></div>
+        <p>{item.items?.map(product => product.product_name).join(", ")}</p><small>Pembayaran · {paymentStatusLabel(item.payment?.status)}
+          {canContinuePayment(item) && ` · bayar sebelum ${formatDeadline(item.expires_at)}`}</small></div>
+      <div><strong>{rupiah(Number(item.grand_total))}</strong><span className="order-state">{orderStatusLabel(item.status)}</span>
+        {canContinuePayment(item)
+          ? <Button onClick={() => navigate("order-detail", {orderNumber: item.order_number})}>Bayar sekarang</Button>
+          : <button className="text-link" onClick={() => navigate("order-detail", {orderNumber: item.order_number})}>Lihat detail</button>}</div>
     </article>)}</div>
     {result && result.meta.last_page > 1 && <nav aria-label="Halaman pesanan">
       <Button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Sebelumnya</Button>

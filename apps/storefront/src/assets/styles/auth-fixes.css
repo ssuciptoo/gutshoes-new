@@ -2,11 +2,6 @@
   outline: none;
 }
 
-.login-error-demo {
-  align-self: center;
-  margin-top: .5rem;
-  font-size: .8rem;
-}
 
 .account-nav {
   scrollbar-width: none;
@@ -134,3 +129,34 @@
 /* Order snapshots have text and totals, without a live product image column. */
 .order-product-line.order-product-line--snapshot { grid-template-columns: minmax(0, 1fr) auto; }
 .order-product-line--snapshot > span { min-width: 0; overflow-wrap: anywhere; }
+
+/* Login pelanggan: panel login lebih dulu di DOM (dan di layar kecil), copy di kiri pada desktop. */
+@media (min-width: 901px) {
+  .auth-login .login-copy { order: -1; }
+}
+.login-panel .back-link { color: var(--action-on-soft); margin-bottom: 2rem; }
+.login-panel h1 { font-size: 2.4rem; letter-spacing: -.03em; line-height: 1.1; margin: 0; }
+.login-copy h2 { font-size: clamp(2.4rem, 4.2vw, 4.4rem); line-height: 1.04; letter-spacing: -.035em; max-width: 12ch; margin: 0 0 2rem; }
+.login-benefits { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; max-width: 44ch; }
+.login-benefits li { display: flex; align-items: center; gap: .9rem; font-size: 1.02rem; line-height: 1.45; color: var(--ink); }
+.login-benefits li > span { flex: 0 0 auto; width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; background: var(--white); color: var(--action-on-soft); box-shadow: 0 0 0 1px var(--line); }
+.google-button { gap: .75rem; }
+.login-guest { width: 100%; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; color: var(--muted); font-size: .92rem; }
+@media (max-width: 900px) {
+  .login-panel > img { display: none; }
+  .login-panel .back-link { margin-bottom: 1.25rem; }
+  .login-copy { padding-top: 2.5rem; padding-bottom: 3rem; }
+  .login-copy h2 { font-size: 1.6rem; max-width: none; margin-bottom: 1.25rem; }
+}
+@media (max-width: 600px) {
+  .login-panel { padding: 1.5rem 1rem 2.5rem; }
+  .login-panel h1 { font-size: 1.9rem; }
+  .login-benefits li { font-size: .95rem; }
+}
+
+/* Info netral (mis. ajakan melengkapi profil) */
+.notice.info { background: var(--soft); color: var(--ink); border-left: 3px solid var(--action-on-soft); }
+
+/* Ajakan melanjutkan pembayaran di detail pesanan */
+.order-pay-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; margin: 1rem 0; padding: 1rem 1.1rem; border-radius: 12px; background: var(--soft); border-left: 3px solid var(--action-on-soft); }
+.order-pay-banner p { margin: 0; line-height: 1.5; flex: 1 1 260px; }

@@ -43,8 +43,8 @@ function OrderSummary({
       </div>
       <small>
         {source === "api" && pricing
-          ? "Total ini berasal dari validasi API Laravel."
-          : "Nilai ini hanya simulasi frontend dan bukan tagihan."}
+          ? "Total sudah termasuk ongkir dan diskon yang berlaku."
+          : "Total ini hanya perkiraan dan bukan tagihan."}
       </small>
     </aside>
   );

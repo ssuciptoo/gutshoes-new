@@ -20,6 +20,17 @@ function Dashboard({navigate}) {
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
         <>
+          {Number(data.operations?.payments_overdue || 0) > 0 && (
+            <div className="adm-feedback adm-overdue-alert" role="status">
+              <span>
+                <strong>{data.operations.payments_overdue} pesanan melewati batas bayar.</strong>{" "}
+                Sistem akan membatalkannya secara otomatis dan mengembalikan stoknya.
+              </span>
+              <button type="button" onClick={() => navigate("orders", {status: "OVERDUE"})}>
+                Lihat pesanan
+              </button>
+            </div>
+          )}
           <section className="adm-dashboard-section" aria-labelledby="business-summary">
             <div className="adm-section-heading">
               <div>
@@ -67,15 +78,15 @@ function Dashboard({navigate}) {
                 attention={Number(orders.paid || 0) + Number(orders.processing || 0) > 0}
               />
               <Metric
-                label="Pembayaran tertunda"
-                value={data.operations?.payments_pending || 0}
-                delta="Perlu rekonsiliasi"
-                attention={Number(data.operations?.payments_pending || 0) > 0}
+                label="Lewat batas bayar"
+                value={data.operations?.payments_overdue || 0}
+                delta="Belum dibayar & sudah kedaluwarsa"
+                attention={Number(data.operations?.payments_overdue || 0) > 0}
               />
               <Metric
                 label="Pengiriman tertunda"
                 value={data.operations?.shipments_pending || 0}
-                delta="Perlu diproses"
+                delta="Pesanan lunas belum dikirim"
                 attention={Number(data.operations?.shipments_pending || 0) > 0}
               />
               <Metric
@@ -90,7 +101,7 @@ function Dashboard({navigate}) {
             <div className="adm-card-head">
               <div>
                 <h2>Fokus operasional</h2>
-                <p>Data langsung dari server.</p>
+                <p>Pekerjaan yang perlu ditindaklanjuti.</p>
               </div>
             </div>
             <button onClick={() => navigate("orders")}>
@@ -147,6 +158,12 @@ function Dashboard({navigate}) {
               <ul>
                 {data.recent_orders.map((order) => (
                   <li key={order.id}>
+                    <button
+                      type="button"
+                      className="adm-recent-link"
+                      onClick={() => navigate("orders", {order: order.order_number})}
+                      aria-label={`Buka pesanan ${order.order_number}`}
+                    />
                     <span>
                       <strong>{order.order_number}</strong>
                       <small>

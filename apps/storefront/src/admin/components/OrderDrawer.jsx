@@ -1,11 +1,25 @@
 import React, {useEffect, useState} from "react";
 import {api} from "../../api";
 import {rupiah} from "../../data";
-import {apiErrorMessage, statusLabel, statusTone} from "../lib/helpers";
+import {apiErrorMessage, formatDateTime, orderStatusView, statusLabel, statusTone} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
 import Badge from "./Badge";
 import Button from "./Button";
 import Icon from "./Icon";
+
+// Catatan yang ditulis sistem (bukan admin) diterjemahkan untuk riwayat status.
+const SYSTEM_NOTES = {
+  "Order created": "Pesanan dibuat",
+  "Midtrans payment confirmed": "Pembayaran Midtrans terkonfirmasi",
+  "Payment window expired": "Batas waktu pembayaran habis",
+  "Payment received without a complete reservation; refund requires review":
+    "Pembayaran diterima tetapi stok tidak lagi tersedia; refund perlu ditinjau",
+};
+const translateNote = (note) =>
+  SYSTEM_NOTES[note] ||
+  (note?.startsWith("Midtrans payment failed: ")
+    ? `Pembayaran Midtrans gagal: ${note.slice("Midtrans payment failed: ".length)}`
+    : note);
 
 function OrderDrawer({order, onClose, onUpdated}) {
   const dialogRef = useDialogFocus(onClose);
@@ -83,6 +97,10 @@ function OrderDrawer({order, onClose, onUpdated}) {
     }
   };
   const status = detail?.status || order.status;
+  const statusView = orderStatusView(status, detail?.expires_at || order.raw.expires_at);
+  const payment = detail?.payment;
+  const refunds = detail?.refunds || [];
+  const history = detail?.status_histories || [];
   const shipment = detail?.shipment;
   const address = detail?.addresses?.find((item) => item.type === "SHIPPING");
   const items = detail?.items || [];
@@ -146,7 +164,7 @@ function OrderDrawer({order, onClose, onUpdated}) {
                 <Badge tone={statusTone(detail.payment?.status)}>
                   Pembayaran: {detail.payment?.status ? statusLabel(detail.payment.status) : "belum ada"}
                 </Badge>
-                <Badge tone={statusTone(status)}>{statusLabel(status)}</Badge>
+                <Badge tone={statusView.tone}>{statusView.label}</Badge>
               </div>
               <section>
                 <h3>Pelanggan</h3>
@@ -206,6 +224,61 @@ function OrderDrawer({order, onClose, onUpdated}) {
                   </small>
                 </p>
               </section>
+              <section>
+                <h3>Pembayaran</h3>
+                {payment ? (
+                  <dl className="adm-detail-list">
+                    <div><dt>Status</dt><dd><Badge tone={statusTone(payment.status)}>{statusLabel(payment.status)}</Badge></dd></div>
+                    <div><dt>Penyedia</dt><dd>{payment.provider === "MIDTRANS" ? "Midtrans" : payment.provider}{payment.provider_status ? ` · ${payment.provider_status}` : ""}</dd></div>
+                    <div><dt>Jumlah</dt><dd>{rupiah(Number(payment.amount || 0))}</dd></div>
+                    {payment.paid_at ? (
+                      <div><dt>Dibayar</dt><dd>{formatDateTime(payment.paid_at)}</dd></div>
+                    ) : (
+                      <div><dt>Batas bayar</dt><dd className={statusView.tone === "danger" ? "adm-text-danger" : ""}>{formatDateTime(payment.expires_at || detail.expires_at)}</dd></div>
+                    )}
+                    {payment.provider_transaction_id && (
+                      <div><dt>ID transaksi</dt><dd><code>{payment.provider_transaction_id}</code></dd></div>
+                    )}
+                  </dl>
+                ) : (
+                  <p>Belum ada pembayaran dibuat.</p>
+                )}
+                {statusView.label === "Lewat batas bayar" && (
+                  <p className="adm-muted-copy">
+                    Batas bayar sudah lewat. Sistem akan membatalkan pesanan ini secara otomatis dan mengembalikan stoknya.
+                  </p>
+                )}
+              </section>
+              {refunds.length > 0 && (
+                <section>
+                  <h3>Refund</h3>
+                  {refunds.map((refund) => (
+                    <div className="adm-line-item" key={refund.id}>
+                      <span>
+                        <Badge tone={statusTone(refund.status)}>{statusLabel(refund.status)}</Badge>
+                        <small>{refund.reason} · {formatDateTime(refund.completed_at || refund.created_at)}</small>
+                      </span>
+                      <strong>{rupiah(Number(refund.amount || 0))}</strong>
+                    </div>
+                  ))}
+                </section>
+              )}
+              {history.length > 0 && (
+                <section>
+                  <h3>Riwayat status</h3>
+                  <ol className="adm-timeline">
+                    {history.map((entry) => (
+                      <li key={entry.id}>
+                        <strong>{statusLabel(entry.to_status)}</strong>
+                        <small>
+                          {formatDateTime(entry.created_at)} · {entry.actor?.name || (entry.actor_id ? `Admin #${entry.actor_id}` : "Sistem")}
+                        </small>
+                        {entry.note && <span>{translateNote(entry.note)}</span>}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )}
               <section>
                 <h3>Aksi operasional</h3>
                 <div className="adm-action-grid">

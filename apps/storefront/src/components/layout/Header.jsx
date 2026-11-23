@@ -37,7 +37,7 @@ function Header({cartCount, navigate, query, setQuery, user, page, categories}) 
           )}
           <button
             className="orders-button"
-            onClick={() => navigate("guest-orders")}
+            onClick={() => navigate(user && user.role !== "ADMIN" ? "orders" : "guest-orders")}
             aria-label="Buka pesanan saya"
           >
             <Icon name="package" />

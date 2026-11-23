@@ -15,7 +15,7 @@ function useAdminResource(loader) {
         if (active)
           setState({
             loading: false,
-            error: error.message || "Server admin tidak dapat dijangkau.",
+            error: error.message || "Data belum dapat dimuat. Coba lagi sebentar lagi.",
             data: null,
           });
       });

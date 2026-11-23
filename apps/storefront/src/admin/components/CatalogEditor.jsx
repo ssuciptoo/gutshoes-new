@@ -2,11 +2,11 @@ import React, {useState} from "react";
 import {api} from "../../api";
 import {apiErrorMessage, slugify} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
+import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
 
 function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
-  const dialogRef = useDialogFocus(onClose);
   const isCategory = kind === "category";
   const label = isCategory ? "kategori" : "merek";
   const [form, setForm] = useState(() => ({
@@ -78,11 +78,15 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
       setSaving(false);
     }
   };
+  // Snapshot awal form untuk mendeteksi perubahan yang belum disimpan.
+  const [snapshot] = useState(() => JSON.stringify(form));
+  const requestClose = useUnsavedGuard(!saving && JSON.stringify(form) !== snapshot, onClose);
+  const dialogRef = useDialogFocus(requestClose);
   return (
     <div
       className="adm-overlay"
       role="presentation"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
     >
       <aside
         ref={dialogRef}
@@ -100,7 +104,7 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
               {form.id ? form.name || `Edit ${label}` : `Tambah ${label}`}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Tutup editor">
+          <button onClick={requestClose} aria-label="Tutup editor">
             <Icon name="close" />
           </button>
         </header>
@@ -204,7 +208,7 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
                 Hapus {label}
               </button>
             )}
-            <Button kind="secondary" type="button" onClick={onClose}>
+            <Button kind="secondary" type="button" onClick={requestClose}>
               Tutup
             </Button>
             <Button type="submit" disabled={saving}>

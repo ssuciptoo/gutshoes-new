@@ -92,7 +92,7 @@ export const storefrontRoutes = [
   {
     page: "payment",
     path: "/payment",
-    render: (c) => <Payment order={c.order} navigate={c.navigate} />,
+    render: (c) => <Payment order={c.order} navigate={c.navigate} user={c.user} />,
   },
   {
     page: "guest-orders",
@@ -131,7 +131,7 @@ export const storefrontRoutes = [
           onLogout={c.logout}
         />
       ) : (
-        <Login navigate={c.navigate} onLogin={c.login} returnTo={c.returnTo} />
+        <Login navigate={c.navigate} returnTo={c.returnTo} />
       ),
   },
   {

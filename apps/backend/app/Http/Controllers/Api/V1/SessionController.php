@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Auth\GuestOrderLinker;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -26,8 +27,11 @@ class SessionController extends Controller
         return response()->json(['data' => $this->userData($user)]);
     }
 
-    public function me(Request $request): JsonResponse
+    public function me(Request $request, GuestOrderLinker $orders): JsonResponse
     {
+        // Pesanan guest yang dibuat setelah akun terdaftar ikut tertaut saat pelanggan masuk lagi.
+        $orders->link($request->user());
+
         return response()->json(['data' => $this->userData($request->user())]);
     }
 
@@ -40,9 +44,10 @@ class SessionController extends Controller
         return response()->json(['data' => ['logged_out' => true]]);
     }
 
-    /** @return array<string, string> */
+    /** @return array<string, string|null> */
     private function userData(User $user): array
     {
-        return ['name' => $user->name, 'email' => $user->email, 'role' => $user->role->value];
+        return ['name' => $user->name, 'email' => $user->email, 'role' => $user->role->value,
+            'created_at' => $user->created_at?->toIso8601String(), 'updated_at' => $user->updated_at?->toIso8601String()];
     }
 }

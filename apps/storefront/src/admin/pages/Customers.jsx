@@ -16,7 +16,7 @@ const FILTERS = [
   ["0", "Belum verifikasi"],
 ];
 
-function CustomersPage() {
+function CustomersPage({navigate}) {
   const [selected, setSelected] = useState(null);
   const resource = usePagedResource(api.adminCustomers, {filterParam: "verified"});
   const rows = resource.rows;
@@ -91,7 +91,11 @@ function CustomersPage() {
           <Pagination meta={resource.meta} page={resource.page} setPage={resource.setPage} unit="pelanggan" />
         </section>
       )}
-      {selected && <CustomerDrawer customerId={selected} onClose={() => setSelected(null)} />}
+      {selected && <CustomerDrawer
+          customerId={selected}
+          onClose={() => setSelected(null)}
+          onOpenOrder={(orderNumber) => navigate?.("orders", {order: orderNumber})}
+        />}
     </>
   );
 }

@@ -41,8 +41,11 @@ class CreateOrderService
         $cart->load('items.variant');
         $warehouse = Warehouse::where('is_active', true)->firstOrFail();
         [$weight, $quantity] = $this->shippingLoad($cart);
-        $quotes = $this->shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $payload['address'], $weight, $quantity, $payload['shipping']['courier'] ?? null);
-        $quote = count($quotes) === 1 && $quotes[0]->service === 'REGIONAL_PER_ITEM' ? $quotes[0] : collect($quotes)->first(fn (ShippingQuote $item) => $item->service === $payload['shipping']['service']);
+        // Sama dengan cek ongkir: tarif semua kurir (cache yang sama), lalu cocokkan kurir + layanan.
+        $quotes = $this->shipping->quotes(['provider_area_id' => $warehouse->provider_area_id], $payload['address'], $weight, $quantity);
+        $courier = (string) ($payload['shipping']['courier'] ?? '');
+        $quote = count($quotes) === 1 && $quotes[0]->service === 'REGIONAL_PER_ITEM' ? $quotes[0] : collect($quotes)->first(fn (ShippingQuote $item) => $item->service === $payload['shipping']['service']
+            && ($courier === '' || strcasecmp($item->courier, $courier) === 0));
         if (! $quote instanceof ShippingQuote) {
             throw new DomainException('Layanan pengiriman yang dipilih tidak tersedia.');
         }

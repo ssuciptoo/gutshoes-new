@@ -47,9 +47,19 @@ export async function csrf() {
     );
 }
 
+// Pengambil session token Clerk (diatur oleh ClerkSessionBridge). Dikirim sebagai Bearer
+// untuk request pelanggan; endpoint admin tetap memakai sesi cookie admin.
+let authTokenGetter = null;
+export function setAuthTokenGetter(getter) {
+  authTokenGetter = getter;
+}
+
 async function request(path, options = {}, retried = false) {
   const headers = new Headers(options.headers || {});
-  if (options.body && !(options.body instanceof FormData))
+  if (authTokenGetter && !path.startsWith("/admin/")) {
+    const token = await authTokenGetter().catch(() => null);
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+  }  if (options.body && !(options.body instanceof FormData))
     headers.set("Content-Type", "application/json");
   headers.set("Accept", "application/json");
   const method = (options.method || "GET").toUpperCase();
@@ -73,7 +83,7 @@ async function request(path, options = {}, retried = false) {
     });
   } catch (error) {
     throw new ApiError(
-      "Backend GutShoes belum dapat dijangkau. Periksa koneksi atau jalankan API Laravel.",
+      "Tidak dapat terhubung ke GutShoes. Periksa koneksi internet lalu coba lagi.",
       0,
       {},
       error,
@@ -95,14 +105,17 @@ async function request(path, options = {}, retried = false) {
   }
   if (!response.ok)
     throw new ApiError(
-      body?.message || "Permintaan tidak dapat diproses.",
+      // Pesan error server (5xx) bisa berisi detail teknis saat APP_DEBUG aktif; jangan tampilkan ke pengguna.
+      response.status >= 500
+        ? "Terjadi kendala di server. Coba lagi sebentar lagi."
+        : body?.message || "Permintaan tidak dapat diproses.",
       response.status,
       body,
     );
   return body;
 }
 
-export const googleLoginUrl = `${BACKEND_BASE}/api/v1/auth/google`;
+export const backendBaseUrl = BACKEND_BASE;
 export const api = {
   provinces: () => request("/regions/provinces"),
   regencies: (code) =>

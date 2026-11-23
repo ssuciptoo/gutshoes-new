@@ -66,7 +66,11 @@ export function readRoute(hash = window.location.hash) {
   if (page === "admin") {
     return {
       page,
-      data: {section: ADMIN_SECTIONS.has(parameter) ? parameter : "dashboard"},
+      data: {
+        section: ADMIN_SECTIONS.has(parameter) ? parameter : "dashboard",
+        // Parameter halaman admin, mis. #admin/orders?order=GS-123 atau ?status=OVERDUE
+        params: Object.fromEntries(new URLSearchParams(search)),
+      },
     };
   }
   if (!STOREFRONT_PAGES.has(page)) return {page: "home", data: {}};
@@ -86,7 +90,10 @@ export function routeHash(page, data = {}) {
     const section = ADMIN_SECTIONS.has(data.section)
       ? data.section
       : "dashboard";
-    return `#admin/${section}`;
+    const query = new URLSearchParams(
+      Object.entries(data.params || {}).filter(([, value]) => value),
+    ).toString();
+    return `#admin/${section}${query ? `?${query}` : ""}`;
   }
   if (!STOREFRONT_PAGES.has(page)) return "#home";
   if (page === "product") {

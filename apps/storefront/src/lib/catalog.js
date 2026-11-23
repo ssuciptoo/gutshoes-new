@@ -1,6 +1,6 @@
-import {googleLoginUrl} from "../api";
+import {backendBaseUrl} from "../api";
 
-const backendBase = googleLoginUrl.replace(/\/api\/v1\/auth\/google$/, "");
+const backendBase = backendBaseUrl;
 
 export function catalogImageUrl(path) {
   if (!path) return "";

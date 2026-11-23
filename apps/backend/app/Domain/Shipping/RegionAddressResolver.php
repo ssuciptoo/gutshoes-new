@@ -11,9 +11,12 @@ class RegionAddressResolver
 
     /**
      * @param  array<string,mixed>  $data
+     * @param  bool  $mapShippingArea  false untuk menyimpan alamat pelanggan: kode area kurir baru
+     *                                 dipetakan saat cek ongkir dan checkout, sehingga simpan alamat
+     *                                 tidak bergantung pada layanan ongkir.
      * @return array<string,mixed>
      */
-    public function resolve(array $data): array
+    public function resolve(array $data, bool $mapShippingArea = true): array
     {
         $p = DB::table('region_provinces')->where('code', $data['province_code'])->first();
         $r = DB::table('region_regencies')->where('code', $data['regency_code'])->where('province_code', $p?->code)->first();
@@ -25,7 +28,7 @@ class RegionAddressResolver
 
         $resolved = array_replace($data, ['province' => $p->name, 'city' => $r->name, 'district' => $d->name, 'village' => $v->name, 'postal_code' => $v->postal_code ?: ($data['postal_code'] ?? '')]);
         unset($resolved['provider_area_id'], $resolved['destination_area_id']);
-        $resolved['provider_area_id'] = $this->areaMapper->map($resolved, (string) $v->code);
+        $resolved['provider_area_id'] = $mapShippingArea ? $this->areaMapper->map($resolved, (string) $v->code) : null;
 
         return $resolved;
     }

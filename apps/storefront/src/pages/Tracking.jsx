@@ -3,6 +3,7 @@ import {api} from "../api";
 import {rupiah} from "../data";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
+import {formatDeadline, paymentStatusLabel} from "../lib/orderStatus";
 
 function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
   const [number, setNumber] = useState(order?.number || "");
@@ -102,7 +103,13 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
     }
   };
   const continuePayment = () => {
-    if (!result?.can_pay || !accessToken) return;
+    if (!result?.can_pay) return;
+    // Pelanggan yang login melanjutkan pembayaran dari detail pesanan di akunnya.
+    if (!accessToken && user) {
+      navigate("order-detail", {orderNumber: result.order_number});
+      return;
+    }
+    if (!accessToken) return;
     onOpenPayment({
       ...order,
       number: result.order_number,
@@ -127,7 +134,7 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
         <h1>Lacak perjalanan pesananmu</h1>
         <p>
           {accessToken
-            ? "Akses aman pesanan ditemukan di browser ini. Status dimuat langsung dari Laravel tanpa memakai email sebagai kredensial."
+            ? "Pesananmu di perangkat ini sudah dikenali. Status di bawah selalu menampilkan data terbaru."
             : "Masukkan nomor pesanan dan email yang digunakan saat checkout untuk pencarian manual."}
         </p>
         <form ref={formRef} onSubmit={submit} aria-busy={loading}>
@@ -175,8 +182,8 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
           <div className="guest-conversion">
             <strong>Simpan pesanan ini ke akun</strong>
             <p>
-              Masuk dengan Google memakai email yang sama agar pesanan yang
-              memenuhi syarat dapat ditautkan.
+              Masuk atau daftar memakai email yang sama dengan pesanan ini,
+              dan pesanan akan otomatis tersimpan di akunmu.
             </p>
             <Button variant="secondary" onClick={() => navigate("login")}>
               Masuk dan tautkan pesanan
@@ -200,10 +207,26 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
               </span>
               <span>
                 Status pembayaran
-                <strong>{result.payment_status || "Belum tersedia"}</strong>
+                <strong>{paymentStatusLabel(result.payment_status)}</strong>
               </span>
               {result.can_pay && (
                 <Button onClick={continuePayment}>Lanjutkan pembayaran</Button>
+              )}
+            </div>
+          )}
+          {/* Hasil pencarian manual (nomor + email) tidak membawa tautan pembayaran. */}
+          {!result.grand_total && result.can_pay && (
+            <div className="tracking-payment-meta">
+              <span>
+                Bayar sebelum<strong>{formatDeadline(result.expires_at)}</strong>
+              </span>
+              {user ? (
+                <Button onClick={continuePayment}>Lanjutkan pembayaran</Button>
+              ) : (
+                <small>
+                  Lanjutkan pembayaran dari halaman Pesanan saya di perangkat yang dipakai saat checkout,
+                  atau lewat tautan di email konfirmasi pesanan.
+                </small>
               )}
             </div>
           )}
@@ -277,8 +300,7 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
             </div>
           )}
           <p className="demo-note">
-            Status pembayaran, pengiriman, dan kelayakan membayar berasal
-            langsung dari backend GutShoes.
+            Status pembayaran dan pengiriman selalu menampilkan data terbaru.
           </p>
         </section>
       )}

@@ -2,6 +2,7 @@ import React, {useState} from "react";
 import {api} from "../../api";
 import {apiErrorMessage} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
+import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
 
@@ -16,7 +17,6 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const dialogRef = useDialogFocus(onClose);
   const usageCount = Number(size?.product_variants_count || 0);
   const updateIdentity = (key, value) => {
     setForm((previous) => {
@@ -75,11 +75,15 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
     }
   };
 
+  // Snapshot awal form untuk mendeteksi perubahan yang belum disimpan.
+  const [snapshot] = useState(() => JSON.stringify(form));
+  const requestClose = useUnsavedGuard(!saving && JSON.stringify(form) !== snapshot, onClose);
+  const dialogRef = useDialogFocus(requestClose);
   return (
     <div
       className="adm-overlay"
       role="presentation"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
     >
       <aside
         ref={dialogRef}
@@ -95,7 +99,7 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
               {form.id ? form.label || "Edit ukuran" : "Ukuran baru"}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Tutup editor">
+          <button onClick={requestClose} aria-label="Tutup editor">
             <Icon name="close" />
           </button>
         </header>
@@ -200,7 +204,7 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
                 Hapus ukuran
               </button>
             )}
-            <Button kind="secondary" type="button" onClick={onClose}>
+            <Button kind="secondary" type="button" onClick={requestClose}>
               Tutup
             </Button>
             <Button type="submit" disabled={saving}>

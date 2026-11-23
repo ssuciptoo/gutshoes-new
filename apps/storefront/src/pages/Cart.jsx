@@ -37,15 +37,15 @@ function Cart({
         <span>
           <strong>
             {cartLoading
-              ? "Memuat cart dari server…"
+              ? "Memuat keranjang…"
               : cartSource === "api"
-                ? "Cart server aktif"
-                : "Mode demo — belum tersimpan di server"}
+                ? "Keranjang tersimpan"
+                : "Mode demo — keranjang belum tersimpan"}
           </strong>
           <small>
             {cartSource === "api"
-              ? "Tampilan, quote, dan order memakai cart Laravel yang sama."
-              : "Jumlah, quote, dan order hanya simulasi lokal."}
+              ? "Isi keranjang tetap tersimpan saat kamu lanjut ke checkout."
+              : "Jumlah dan ongkir hanya simulasi, pesanan tidak akan dibuat."}
           </small>
         </span>
         {cartError && (

@@ -9,9 +9,12 @@ import './assets/styles/completion.css';
 import './assets/styles/theme.css';
 import './assets/styles/motion.css';
 import App from './App';
+import {AuthProvider} from './lib/clerk';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>,
 );

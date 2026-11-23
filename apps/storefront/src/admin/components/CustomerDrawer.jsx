@@ -7,7 +7,7 @@ import Badge from "./Badge";
 import Button from "./Button";
 import Icon from "./Icon";
 
-function CustomerDrawer({customerId, onClose}) {
+function CustomerDrawer({customerId, onClose, onOpenOrder}) {
   const dialogRef = useDialogFocus(onClose);
   const [detail, setDetail] = useState(null);
   const [error, setError] = useState("");
@@ -99,7 +99,9 @@ function CustomerDrawer({customerId, onClose}) {
                 detail.orders.map((order) => (
                   <div className="adm-line-item adm-order-item" key={order.id}>
                     <span>
-                      {order.order_number}
+                      <button type="button" className="adm-text-button adm-order-link" onClick={() => onOpenOrder?.(order.order_number)}>
+                        {order.order_number}
+                      </button>
                       <small>
                         <Badge tone={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
                       </small>

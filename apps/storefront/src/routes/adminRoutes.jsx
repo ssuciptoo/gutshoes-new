@@ -21,9 +21,19 @@ export const adminRoutes = [
   {section: "catalog", path: "/admin/catalog", render: () => <Catalog />},
   {section: "sizes", path: "/admin/sizes", render: () => <Sizes />},
   {section: "inventory", path: "/admin/inventory", render: () => <Inventory />},
-  {section: "orders", path: "/admin/orders", render: () => <Orders />},
+  {
+    section: "orders",
+    path: "/admin/orders",
+    render: (context) => (
+      <Orders key={JSON.stringify(context.params || {})} params={context.params} />
+    ),
+  },
   {section: "refunds", path: "/admin/refunds", render: () => <Refunds />},
-  {section: "customers", path: "/admin/customers", render: () => <Customers />},
+  {
+    section: "customers",
+    path: "/admin/customers",
+    render: (context) => <Customers navigate={context.navigate} />,
+  },
   {
     section: "promotions",
     path: "/admin/promotions",

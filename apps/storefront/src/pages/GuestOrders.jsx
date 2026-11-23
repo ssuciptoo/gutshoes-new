@@ -141,9 +141,8 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
         <div>
           <h1>Pesanan terakhir saya</h1>
           <p>
-            Referensi aman tersimpan di browser ini. Status dan kelayakan
-            pembayaran selalu diperiksa ulang ke Laravel menggunakan token
-            khusus setiap pesanan.
+            Pesanan yang kamu buat di perangkat ini tersimpan di sini. Status
+            dan pembayarannya selalu menampilkan data terbaru.
           </p>
         </div>
         {references.length > 0 && (

@@ -1,5 +1,6 @@
 import React, {lazy, Suspense, useEffect, useRef, useState} from "react";
-import {api, googleLoginUrl, isBackendUnavailable} from "./api";
+import {api, isBackendUnavailable} from "./api";
+import {ClerkSessionBridge, clerkEnabled, clerkSignOut} from "./lib/clerk";
 import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import {cartKey, mapServerCart} from "./lib/cart";
@@ -18,6 +19,36 @@ function RouteLoading() {
   );
 }
 
+// Pesanan terakhir disimpan per tab agar halaman pembayaran tetap terisi setelah pembeli
+// kembali dari Midtrans (halaman dimuat ulang). Token guest tidak ikut disimpan di sini.
+const LAST_ORDER_KEY = "gutshoes-last-order";
+function readLastOrder() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(LAST_ORDER_KEY) || "null");
+    return saved?.number && saved.source === "api" ? saved : null;
+  } catch {
+    return null;
+  }
+}
+// Token guest diambil dari daftar pesanan guest di perangkat (localStorage), bukan disalin lagi.
+function withGuestToken(order) {
+  if (!order || order.customerType !== "guest") return order;
+  const reference = initialGuestOrders.find((item) => item.number === order.number);
+  return reference?.accessToken ? {...order, accessToken: reference.accessToken} : order;
+}
+function writeLastOrder(order) {
+  try {
+    if (order?.number && order.source === "api") {
+      const safe = {...order};
+      delete safe.accessToken;
+      delete safe.server;
+      sessionStorage.setItem(LAST_ORDER_KEY, JSON.stringify(safe));
+    } else sessionStorage.removeItem(LAST_ORDER_KEY);
+  } catch {
+    /* Browser bisa memblokir storage. */
+  }
+}
+
 export default function App() {
   const [route, setRoute] = useState(() => readRoute());
   const {page, data: pageData} = route;
@@ -26,7 +57,7 @@ export default function App() {
   const [order, setOrder] = useState(() =>
     recoveryReference
       ? {...recoveryReference, source: "api", customerType: "guest"}
-      : null,
+      : withGuestToken(readLastOrder()),
   );
   const [returnTo, setReturnTo] = useState("profile");
   const [guestOrders, setGuestOrders] = useState(initialGuestOrders);
@@ -45,7 +76,17 @@ export default function App() {
   const [sessionError, setSessionError] = useState("");
   const cartEpoch = useRef(0);
   const [addresses, setAddresses] = useState([]);
+  // Kunci status login Clerk: null = Clerk belum siap, lalu "signed-out" atau "clerk:<id>".
+  // Sesi dimuat ulang setiap kali kunci ini berubah (masuk/keluar akun).
+  const [authKey, setAuthKey] = useState(clerkEnabled ? null : "static");
   useEffect(() => {
+    if (authKey !== null) return undefined;
+    // Bila skrip Clerk gagal dimuat, toko tetap bisa dipakai tanpa akun.
+    const timer = window.setTimeout(() => setAuthKey((key) => key ?? "unavailable"), 8000);
+    return () => window.clearTimeout(timer);
+  }, [authKey]);
+  useEffect(() => {
+    if (authKey === null) return undefined;
     let active = true;
     const loadSession = async () => {
       try {
@@ -61,8 +102,6 @@ export default function App() {
         setUser({
           ...session.data,
           phone: profile.data.phone || "",
-          created: "—",
-          updated: "—",
         });
         setAddresses(
           addressList.data.map((a) => ({
@@ -84,7 +123,11 @@ export default function App() {
         );
       } catch (error) {
         if (!active) return;
-        if (error.status === 401) setSessionReady(true);
+        if (error.status === 401) {
+          setUser(null);
+          setAddresses([]);
+          setSessionReady(true);
+        }
         else setSessionError("Sesi belum dapat diperiksa. Muat ulang halaman sebelum bertransaksi.");
       }
     };
@@ -92,7 +135,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authKey]);
   useEffect(() => {
     const sync = () => {
       setRoute(readRoute());
@@ -112,6 +155,12 @@ export default function App() {
       window.location.hash = "#login";
     }
   }, [page, user, sessionReady]);
+  // Pelanggan yang sudah masuk tidak perlu melihat halaman login lagi.
+  useEffect(() => {
+    if (sessionReady && page === "login" && user && user.role !== "ADMIN") {
+      window.location.hash = `#${returnTo || "profile"}`;
+    }
+  }, [page, user, sessionReady, returnTo]);
   useEffect(() => {
     if (page !== "product") document.title = routeTitle(route);
   }, [route, page]);
@@ -212,8 +261,8 @@ export default function App() {
       setCartActions((prev) => ({...prev, [key]: {}}));
     } catch (error) {
       const message = isBackendUnavailable(error)
-        ? "Backend terputus. Jumlah tidak diubah; coba lagi saat API tersedia."
-        : error.message || "Jumlah ditolak server.";
+        ? "Koneksi terputus. Jumlah belum diubah, coba lagi sebentar lagi."
+        : error.message || "Jumlah belum dapat diubah.";
       setCartActions((prev) => ({...prev, [key]: {error: message}}));
     }
   };
@@ -235,7 +284,7 @@ export default function App() {
       setCartActions((prev) => ({...prev, [key]: {}}));
     } catch (error) {
       const message = isBackendUnavailable(error)
-        ? "Backend terputus. Item belum dihapus; coba lagi saat API tersedia."
+        ? "Koneksi terputus. Item belum dihapus, coba lagi sebentar lagi."
         : error.message || "Item belum dapat dihapus.";
       setCartActions((prev) => ({...prev, [key]: {error: message}}));
     }
@@ -263,18 +312,22 @@ export default function App() {
   };
   const createOrder = (created) => {
     setOrder(created);
+    writeLastOrder(created);
     if (created?.source === "api" && created.number && created.accessToken)
       rememberGuestOrder(created);
   };
-  const login = () => {
-    window.location.assign(googleLoginUrl);
-  };
+  const login = () => navigate("login");
   const logout = async () => {
     try {
-      await api.logout();
+      // Tutup sesi di server dulu selagi token masih berlaku, lalu keluar dari Clerk.
+      await api.logout().catch((error) => {
+        if (error.status !== 401) throw error;
+      });
+      await clerkSignOut();
       cartEpoch.current++;
       setCart([]);
       setOrder(null);
+      writeLastOrder(null);
       setUser(null);
       setAddresses([]);
       setReturnTo("profile");
@@ -289,7 +342,8 @@ export default function App() {
       <Suspense fallback={<RouteLoading />}>
         <AdminPanel
           section={pageData.section}
-          navigate={(section) => navigate("admin", {section})}
+          params={pageData.params}
+          navigate={(section, params) => navigate("admin", {section, params})}
           onStorefront={() => navigate("home")}
         />
       </Suspense>
@@ -304,6 +358,7 @@ export default function App() {
   });
   return (
     <div className="app">
+      {clerkEnabled && <ClerkSessionBridge onChange={setAuthKey} />}
       <a className="skip-link" href="#main">
         Lewati ke konten
       </a>

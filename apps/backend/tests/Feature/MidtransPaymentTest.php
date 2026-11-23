@@ -227,3 +227,26 @@ it('leaves fresh, expired and unknown payments alone during reconciliation', fun
     expect($unknown->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
         ->and($unknown->payment->refresh()->status)->toBe('PENDING');
 });
+
+it('sends Snap a finish URL back to the order without exposing the guest token', function () {
+    config(['services.storefront.url' => 'https://toko.test/']);
+    ['order' => $order] = payableOrder();
+    Illuminate\Support\Facades\Http::fake(['*' => Illuminate\Support\Facades\Http::response(['token' => 'snap-token', 'redirect_url' => 'https://pay.test/x'])]);
+
+    (new HttpMidtransProvider)->createSnapTransaction($order);
+    $order->update(['user_id' => User::factory()->create()->id]);
+    (new HttpMidtransProvider)->createSnapTransaction($order->refresh());
+
+    $finishUrls = Illuminate\Support\Facades\Http::recorded()->map(fn ($pair) => $pair[0]['callbacks']['finish'] ?? null)->all();
+    expect($finishUrls)->toBe(['https://toko.test/#guest-orders', 'https://toko.test/#order-detail/'.$order->order_number])
+        ->and(implode(' ', $finishUrls))->not->toContain((string) $order->guest_access_token);
+});
+
+it('tells the tracking page whether a pending order can still be paid', function () {
+    ['order' => $order] = payableOrder();
+    $this->postJson('/api/v1/orders/track', ['order_number' => $order->order_number, 'email' => $order->customer_email])
+        ->assertOk()->assertJsonPath('data.can_pay', true)->assertJsonMissingPath('data.payment');
+    $order->update(['expires_at' => now()->subMinute()]);
+    $this->postJson('/api/v1/orders/track', ['order_number' => $order->order_number, 'email' => $order->customer_email])
+        ->assertOk()->assertJsonPath('data.can_pay', false);
+});

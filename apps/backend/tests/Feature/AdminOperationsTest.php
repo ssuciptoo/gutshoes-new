@@ -161,3 +161,29 @@ it('includes recent orders and 30 day revenue on the dashboard and the stock thr
         ->assertJsonPath('data.revenue.last_30_days', '0.00')->assertJsonPath('data.recent_orders', []);
     $this->actingAs($admin)->getJson('/api/v1/admin/inventories')->assertOk()->assertJsonPath('meta.low_stock_threshold', 5);
 });
+
+function adminTestOrder(string $status, \DateTimeInterface $expiresAt): Order
+{
+    return Order::create(['order_number' => 'GS-A-'.fake()->unique()->numerify('######'), 'warehouse_id' => Warehouse::factory()->create()->id,
+        'customer_email' => 'buyer@example.test', 'customer_name' => 'Buyer', 'customer_phone' => '08123', 'status' => $status,
+        'subtotal' => '100000.00', 'shipping_fee' => '10000.00', 'grand_total' => '110000.00', 'currency' => 'IDR',
+        'idempotency_key' => fake()->uuid(), 'payload_hash' => str_repeat('a', 64), 'expires_at' => $expiresAt]);
+}
+
+it('counts only overdue unpaid orders and shipments of paid orders on the dashboard', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $overdue = adminTestOrder('PENDING_PAYMENT', now()->subDay());
+    $fresh = adminTestOrder('PENDING_PAYMENT', now()->addDay());
+    $paid = adminTestOrder('PAID', now()->subDay());
+    foreach ([$overdue, $fresh, $paid] as $order) {
+        $order->shipment()->create(['provider' => 'test', 'courier' => 'jne', 'service' => 'REG', 'fee' => '10000.00', 'status' => 'PENDING', 'quote_snapshot' => []]);
+    }
+
+    $this->actingAs($admin)->getJson('/api/v1/admin/dashboard')->assertOk()
+        ->assertJsonPath('data.operations.payments_overdue', 1)
+        ->assertJsonPath('data.operations.shipments_pending', 1);
+    $this->actingAs($admin)->getJson('/api/v1/admin/orders?status=OVERDUE')->assertOk()
+        ->assertJsonCount(1, 'data')->assertJsonPath('data.0.order_number', $overdue->order_number);
+    $this->actingAs($admin)->getJson("/api/v1/admin/orders/{$overdue->id}")->assertOk()
+        ->assertJsonPath('data.refunds', [])->assertJsonStructure(['data' => ['status_histories']]);
+});

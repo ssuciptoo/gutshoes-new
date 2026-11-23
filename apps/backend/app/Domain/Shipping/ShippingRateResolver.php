@@ -24,7 +24,8 @@ class ShippingRateResolver
             return $this->provider->quote($origin, $destination, $weightGrams, $quantity, $courier);
         }
 
-        $key = 'shipping-quote:'.sha1(json_encode([
+        // Naikkan versi bila bentuk/penyaringan tarif berubah agar cache lama tidak terpakai.
+        $key = 'shipping-quote:v2:'.sha1(json_encode([
             config('gutshoes.shipping_driver'),
             (string) ($origin['provider_area_id'] ?? ''),
             (string) ($destination['provider_area_id'] ?? ''),

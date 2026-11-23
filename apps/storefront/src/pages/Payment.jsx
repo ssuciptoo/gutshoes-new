@@ -5,7 +5,8 @@ import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 
-function Payment({order, navigate}) {
+function Payment({order, navigate, user}) {
+  const ordersPage = user && user.role !== "ADMIN" ? "orders" : "guest-orders";
   const [paymentState, setPaymentState] = useState(
     order?.paymentStatus || "pending",
   );
@@ -41,12 +42,15 @@ function Payment({order, navigate}) {
         <div className="status-symbol">
           <Icon name="package" size={34} />
         </div>
-        <h1>Belum ada pesanan untuk dibayar</h1>
+        <h1>Pesanan tidak ditemukan di halaman ini</h1>
         <p>
-          Buat pesanan dari keranjang agar nomor dan total pembayaran dapat
-          diverifikasi.
+          Pesanan yang sudah kamu buat tetap tersimpan. Buka Pesanan saya untuk
+          melihat status atau melanjutkan pembayaran.
         </p>
-        <Button onClick={() => navigate("cart")}>Buka keranjang</Button>
+        <Button onClick={() => navigate(ordersPage)}>Buka Pesanan saya</Button>
+        <button className="text-link" onClick={() => navigate("cart")}>
+          Kembali ke keranjang
+        </button>
       </main>
     );
   if (order.source === "demo")
@@ -58,15 +62,15 @@ function Payment({order, navigate}) {
         <p className="status-label">MODE DEMO</p>
         <h1>Simulasi checkout selesai</h1>
         <p>
-          Nomor <strong>{order.number}</strong> hanya dibuat di browser. Tidak
-          ada order Laravel, reservasi stok, tagihan, atau pembayaran Midtrans.
+          Nomor <strong>{order.number}</strong> hanya contoh. Tidak ada pesanan,
+          tagihan, atau pembayaran yang dibuat.
         </p>
         <div className="payment-box">
           <span>
             Total simulasi<strong>{rupiah(order.total)}</strong>
           </span>
           <span>
-            Status pembayaran<strong>Tidak diinisiasi</strong>
+            Status pembayaran<strong>Tidak ada tagihan</strong>
           </span>
         </div>
         <Button onClick={() => navigate("cart")}>Kembali ke keranjang</Button>
@@ -83,30 +87,30 @@ function Payment({order, navigate}) {
           ? "MENUNGGU PEMBAYARAN"
           : paymentState === "loading"
             ? "MENYIAPKAN PEMBAYARAN"
-            : "ORDER SUDAH DIBUAT"}
+            : "PESANAN SUDAH DIBUAT"}
       </p>
       <h1>
         {ready
-          ? "Lanjutkan pembayaran di Midtrans"
-          : "Sesi pembayaran belum siap"}
+          ? "Selesaikan pembayaranmu"
+          : "Halaman pembayaran belum siap"}
       </h1>
       <p>
-        Order <strong>{order.number}</strong> sudah dibuat. Statusnya tetap
-        menunggu sampai webhook Midtrans diterima dan diverifikasi backend;
-        redirect kembali ke frontend bukan konfirmasi pembayaran.
+        Pesanan <strong>{order.number}</strong> sudah dibuat. Status berubah
+        menjadi lunas otomatis setelah Midtrans mengonfirmasi pembayaranmu,
+        biasanya dalam beberapa menit.
       </p>
       <div className="payment-box">
         <span>
           Total pembayaran<strong>{rupiah(order.total)}</strong>
         </span>
         <span>
-          Status pembayaran<strong>Menunggu webhook</strong>
+          Status pembayaran<strong>Menunggu pembayaran</strong>
         </span>
       </div>
       {error && <Feedback>{error}</Feedback>}
       {ready ? (
         <Button onClick={() => window.location.assign(redirectUrl)}>
-          Buka pembayaran Midtrans
+          Bayar sekarang
         </Button>
       ) : (
         <Button
@@ -115,12 +119,19 @@ function Payment({order, navigate}) {
           aria-busy={paymentState === "loading"}
         >
           {paymentState === "loading"
-            ? "Menginisiasi Midtrans…"
-            : "Coba inisiasi pembayaran lagi"}
+            ? "Menyiapkan pembayaran…"
+            : "Coba buka pembayaran lagi"}
         </Button>
       )}
-      <button className="text-link" onClick={() => navigate("tracking")}>
-        Periksa status order dari backend
+      <button
+        className="text-link"
+        onClick={() =>
+          order.customerType === "customer"
+            ? navigate("order-detail", {orderNumber: order.number})
+            : navigate("guest-orders")
+        }
+      >
+        Lihat status pesanan
       </button>
       <button className="text-link" onClick={() => navigate("home")}>
         Kembali ke beranda

@@ -9,6 +9,7 @@ import {getAdminRoute} from "./routes";
 
 export default function AdminPanel({
   section = "dashboard",
+  params = {},
   navigate,
   onStorefront,
 }) {
@@ -18,7 +19,7 @@ export default function AdminPanel({
   const navRef = useRef(null);
   const activeRoute = getAdminRoute(section);
   const valid = activeRoute.section;
-  const content = activeRoute.render({navigate});
+  const content = activeRoute.render({navigate, params});
   // Menu samping (HP/tablet): tutup dengan Esc dan setiap kali halaman berganti.
   useEffect(() => {
     setRail(false);

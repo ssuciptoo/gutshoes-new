@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Throwable;
 
 class CustomerOrderController extends Controller
@@ -47,6 +48,9 @@ class CustomerOrderController extends Controller
             'provider_tracking' => $providerTracking,
             'tracking_unavailable' => $trackingUnavailable,
             'timeline' => $order->statusHistories,
+            // Hanya penanda; tautan pembayaran tetap butuh akun pemilik atau token akses guest.
+            'can_pay' => $order->getRawOriginal('status') === 'PENDING_PAYMENT' && Carbon::parse($order->expires_at)->isFuture(),
+            'expires_at' => Carbon::parse($order->expires_at)->toIso8601String(),
         ]]);
     }
 }

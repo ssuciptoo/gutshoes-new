@@ -1,6 +1,6 @@
 import React from "react";
 import {rupiah} from "../../data";
-import {statusLabel, statusTone} from "../lib/helpers";
+import {orderStatusView, statusLabel, statusTone} from "../lib/helpers";
 import Badge from "./Badge";
 import Icon from "./Icon";
 
@@ -21,7 +21,9 @@ function OrdersTable({rows, onOpen}) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((o) => (
+          {rows.map((o) => {
+            const view = orderStatusView(o.status, o.expiresAt);
+            return (
             <tr key={o.id}>
               <td data-label="Pesanan">
                 <strong>{o.id}</strong>
@@ -32,7 +34,8 @@ function OrdersTable({rows, onOpen}) {
                 <Badge tone={o.payment ? statusTone(o.payment) : "neutral"}>{statusLabel(o.payment)}</Badge>
               </td>
               <td data-label="Status">
-                <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
+                <Badge tone={view.tone}>{view.label}</Badge>
+                {view.hint && <small>{view.hint}</small>}
               </td>
               <td data-label="Total" className="num">
                 <strong>{rupiah(o.total)}</strong>
@@ -47,7 +50,8 @@ function OrdersTable({rows, onOpen}) {
                 </button>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -2,6 +2,9 @@ import React, {useEffect, useRef, useState} from "react";
 import {api} from "../../api";
 import {apiErrorMessage, productDraft, slugify} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
+import useUnsavedGuard from "../hooks/useUnsavedGuard";
+
+const formKey = (value) => JSON.stringify({...value, images: undefined});
 import {catalogImageUrl} from "../../lib/catalog";
 import Badge from "./Badge";
 import Button from "./Button";
@@ -17,6 +20,7 @@ function ProductEditor({
   onDeleted,
 }) {
   const [form, setForm] = useState(() => productDraft(product));
+  const [snapshot, setSnapshot] = useState(() => formKey(productDraft(product)));
   const [categoryOptions, setCategoryOptions] = useState(categories);
   const [categoryName, setCategoryName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -29,7 +33,6 @@ function ProductEditor({
   const [imagePreview, setImagePreview] = useState("");
   const imageInputRef = useRef(null);
   const drawerRef = useRef(null);
-  useDialogFocus(onClose, drawerRef);
   useEffect(() => {
     if (!imageFile) {
       setImagePreview("");
@@ -166,6 +169,7 @@ function ProductEditor({
           if (imageInputRef.current) imageInputRef.current.value = "";
         } catch (uploadError) {
           setForm(productDraft(savedProduct));
+          setSnapshot(formKey(productDraft(savedProduct)));
           onSaved(savedProduct);
           setError(
             apiErrorMessage(
@@ -177,6 +181,7 @@ function ProductEditor({
         }
       }
       setForm(productDraft(savedProduct));
+          setSnapshot(formKey(productDraft(savedProduct)));
       setNotice(
         form.id
           ? "Perubahan produk tersimpan."
@@ -208,6 +213,9 @@ function ProductEditor({
         status: "PUBLISHED",
         published_at: response.data.published_at,
       }));
+      setSnapshot((previous) =>
+        JSON.stringify({...JSON.parse(previous), status: "PUBLISHED", published_at: response.data.published_at}),
+      );
       setNotice("Produk berhasil dipublikasikan ke storefront.");
       onSaved(response.data);
     } catch (err) {
@@ -284,11 +292,18 @@ function ProductEditor({
       setUploading(false);
     }
   };
+  // Perubahan dianggap belum tersimpan bila data form berbeda dari versi terakhir yang disimpan
+  // atau ada gambar terpilih yang belum diunggah. Daftar gambar dikecualikan karena langsung tersimpan.
+  const requestClose = useUnsavedGuard(
+    !saving && !uploading && (formKey(form) !== snapshot || Boolean(imageFile)),
+    onClose,
+  );
+  useDialogFocus(requestClose, drawerRef);
   return (
     <div
       className="adm-overlay"
       role="presentation"
-      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+      onMouseDown={(event) => event.target === event.currentTarget && requestClose()}
     >
       <aside
         ref={drawerRef}
@@ -304,7 +319,7 @@ function ProductEditor({
               {form.id ? form.name || "Produk" : "Tambah produk"}
             </h2>
           </div>
-          <button onClick={onClose} aria-label="Tutup editor">
+          <button onClick={requestClose} aria-label="Tutup editor">
             <Icon name="close" />
           </button>
         </header>
@@ -657,7 +672,7 @@ function ProductEditor({
                 Publikasikan
               </Button>
             )}
-            <Button kind="secondary" type="button" onClick={onClose}>
+            <Button kind="secondary" type="button" onClick={requestClose}>
               Tutup
             </Button>
             <Button type="submit" disabled={saving}>

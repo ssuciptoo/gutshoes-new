@@ -55,7 +55,7 @@ function ProductDetail({slug, products, addToCart, navigate}) {
           <p className="price">{rupiah(displayPrice)}</p>
           {selectedVariant && <p className="variant-meta">SKU {selectedVariant.sku} · {selectedVariant.weight} gram</p>}
           {product.description && <p className="description">{product.description}</p>}
-          <div className="size-heading"><strong id="size-picker-label">Pilih ukuran</strong><button disabled title="Panduan ukuran belum tersedia pada prototipe">Panduan ukuran segera</button></div>
+          <div className="size-heading"><strong id="size-picker-label">Pilih ukuran</strong></div>
           <div className="size-picker" role="group" aria-labelledby="size-picker-label">{product.sizes.map((itemSize) => <button key={itemSize} aria-pressed={size === itemSize} className={size === itemSize ? "active" : ""} disabled={!product.stock[itemSize]} onClick={() => { setSize(itemSize); setNotice(""); }}>{itemSize}<small>{!product.stock[itemSize] ? "Habis" : `${product.stock[itemSize]} stok`}</small></button>)}</div>
           <Feedback type={notice.includes("ditambahkan") ? "success" : "error"}>{notice}</Feedback>
           <Button className="add-button" onClick={add}>Tambah ke keranjang <Icon name="cart" /></Button>

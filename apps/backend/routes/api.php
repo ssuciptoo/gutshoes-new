@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\CancellationRefundController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CheckoutQuoteController;
+use App\Http\Controllers\Api\V1\ClerkWebhookController;
 use App\Http\Controllers\Api\V1\CustomerOrderController;
 use App\Http\Controllers\Api\V1\GuestOrderController;
 use App\Http\Controllers\Api\V1\OrderController;
@@ -31,6 +32,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
     Route::get('/products', [CatalogController::class, 'index']);
     Route::get('/products/{slug}', [CatalogController::class, 'show']);
     Route::post('/payments/midtrans/webhook', [PaymentController::class, 'webhook'])->middleware('throttle:webhooks');
+    Route::post('/webhooks/clerk', ClerkWebhookController::class)->middleware('throttle:webhooks');
     Route::post('/orders/track', [CustomerOrderController::class, 'track'])->middleware('throttle:tracking');
 
     Route::middleware('web')->group(function (): void {

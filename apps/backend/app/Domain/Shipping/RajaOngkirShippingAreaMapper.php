@@ -22,9 +22,18 @@ class RajaOngkirShippingAreaMapper implements ShippingAreaMapper
                 throw new DomainException('Area pengiriman tidak dapat dipetakan. Coba lagi atau hubungi admin.');
             }
 
+            $same = fn (mixed $a, mixed $b): bool => strcasecmp(trim((string) $a), trim((string) $b)) === 0;
             $matches = collect($response->json('data'))->filter(fn ($candidate): bool => is_array($candidate)
                 && (string) ($candidate['zip_code'] ?? '') === (string) ($address['postal_code'] ?? '')
-                && strcasecmp((string) ($candidate['district_name'] ?? ''), (string) ($address['district'] ?? '')) === 0);
+                && $same($candidate['district_name'] ?? '', $address['district'] ?? ''));
+            // Beberapa kelurahan bisa berbagi kecamatan dan kode pos (mis. Kebayoran Lama Selatan & Utara,
+            // 12240). Pilih yang nama kelurahannya cocok; bila tidak ada, kembali ke kecocokan kecamatan + kode pos.
+            if ($matches->count() > 1 && filled($address['village'] ?? null)) {
+                $byVillage = $matches->filter(fn (array $candidate): bool => $same($candidate['subdistrict_name'] ?? '', $address['village']));
+                if ($byVillage->count() === 1) {
+                    $matches = $byVillage;
+                }
+            }
             if ($matches->count() !== 1 || ! filled($matches->first()['id'] ?? null)) {
                 throw new DomainException('Area pengiriman RajaOngkir tidak ditemukan secara unik. Periksa kecamatan dan kode pos.');
             }
