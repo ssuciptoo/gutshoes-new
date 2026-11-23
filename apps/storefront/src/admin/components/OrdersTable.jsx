@@ -1,6 +1,6 @@
 import React from "react";
 import {rupiah} from "../../data";
-import {statusTone} from "../lib/helpers";
+import {statusLabel, statusTone} from "../lib/helpers";
 import Badge from "./Badge";
 import Icon from "./Icon";
 
@@ -26,13 +26,17 @@ function OrdersTable({rows, onOpen}) {
               <td data-label="Pesanan">
                 <strong>{o.id}</strong>
                 <small>{o.time}</small>
+                <span className="adm-mobile-summary">
+                  <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
+                  <b>{rupiah(o.total)}</b>
+                </span>
               </td>
               <td data-label="Pelanggan">{o.customer}</td>
               <td data-label="Pembayaran">
-                <Badge tone={statusTone(o.payment)}>{o.payment}</Badge>
+                <Badge tone={o.payment ? statusTone(o.payment) : "neutral"}>{statusLabel(o.payment)}</Badge>
               </td>
               <td data-label="Status">
-                <Badge tone={statusTone(o.status)}>{o.status}</Badge>
+                <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
               </td>
               <td data-label="Total" className="num">
                 <strong>{rupiah(o.total)}</strong>

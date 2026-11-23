@@ -5,7 +5,8 @@ function useAdminResource(loader) {
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let active = true;
-    setState((previous) => ({...previous, loading: true, error: ""}));
+    // Saat memuat ulang, data lama tetap tampil agar halaman tidak berkedip.
+    setState((previous) => ({...previous, loading: previous.data === null, error: ""}));
     loader()
       .then((response) => {
         if (active) setState({loading: false, error: "", data: response.data});

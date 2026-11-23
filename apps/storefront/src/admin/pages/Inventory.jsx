@@ -1,20 +1,19 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {api} from "../../api";
-import useAdminResource from "../hooks/useAdminResource";
-import {apiErrorMessage, serverList} from "../lib/helpers";
+import usePagedResource from "../hooks/usePagedResource";
+import {apiErrorMessage} from "../lib/helpers";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import DataToolbar from "../components/DataToolbar";
 import Empty from "../components/Empty";
 import Icon from "../components/Icon";
 import PageHead from "../components/PageHead";
+import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 
 const emptyCreate = {warehouse_id: "", product_variant_id: "", initial_stock: "", reason: "Stok awal"};
 
 function InventoryPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Semua stok");
   const [editor, setEditor] = useState(null);
   const [options, setOptions] = useState({warehouses: [], variants: []});
   const [optionsLoading, setOptionsLoading] = useState(true);
@@ -24,7 +23,7 @@ function InventoryPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const resource = useAdminResource(() => api.inventories({per_page: 100}));
+  const resource = usePagedResource(api.inventories, {filterParam: "stock"});
 
   useEffect(() => {
     setOptionsLoading(true);
@@ -45,22 +44,14 @@ function InventoryPage() {
   const selectedWarehouse = options.warehouses.find((item) => String(item.id) === String(form.warehouse_id));
   const selectedVariant = options.variants.find((item) => String(item.id) === String(form.product_variant_id));
 
-  const rows = useMemo(() => serverList(resource.data)
-    .map((item) => ({
-      ...item,
-      sku: item.variant?.sku || "—",
-      product: item.variant?.product?.name || "Produk",
-      size: item.variant?.size?.label || item.variant?.size?.value || "—",
-      available: Number(item.on_hand || 0) - Number(item.reserved || 0),
-      warehouseName: item.warehouse?.name || "Gudang",
-    }))
-    .filter((item) => [item.product, item.sku, item.warehouseName].join(" ").toLowerCase().includes(query.toLowerCase()))
-    .filter((item) =>
-      filter === "Semua stok" ||
-      (filter === "Stok rendah" && item.available > 0 && item.available <= 5) ||
-      (filter === "Habis" && item.available === 0) ||
-      (filter === "Tersedia" && item.available > 5),
-    ), [resource.data, query, filter]);
+  const rows = resource.rows.map((item) => ({
+    ...item,
+    sku: item.variant?.sku || "—",
+    product: item.variant?.product?.name || "Produk",
+    size: item.variant?.size?.label || item.variant?.size?.value || "—",
+    available: Number(item.on_hand || 0) - Number(item.reserved || 0),
+    warehouseName: item.warehouse?.name || "Gudang",
+  }));
 
   const openCreate = () => {
     setEditor({mode: "create"});
@@ -139,7 +130,7 @@ function InventoryPage() {
     <>
       <PageHead section="inventory" action="Tambah stok" onAction={openCreate} />
       {notice && <div className="adm-feedback success" role="status"><Icon name="check" />{notice}</div>}
-      <DataToolbar {...{query, setQuery, filter, setFilter}} options={["Semua stok", "Stok rendah", "Habis", "Tersedia"]} />
+      <DataToolbar query={resource.query} setQuery={resource.setQuery} filter={resource.filter} setFilter={resource.setFilter} options={[["", "Semua stok"], ["low", "Stok rendah"], ["out", "Habis"], ["available", "Tersedia"]]} placeholder="Cari produk, SKU, atau gudang…" searchLabel="Cari stok" />
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
         <section className="adm-card adm-table-card">
@@ -165,6 +156,7 @@ function InventoryPage() {
               </table>
             </div>
           ) : <Empty title="Varian tidak ditemukan" text="Coba ubah pencarian atau tambahkan kombinasi varian dan gudang." />}
+          <Pagination meta={resource.meta} page={resource.page} setPage={resource.setPage} unit="record stok" />
         </section>
       )}
       {editor && (

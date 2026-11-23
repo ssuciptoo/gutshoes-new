@@ -2,34 +2,26 @@ import React, {useState} from "react";
 import {api} from "../../api";
 import {rupiah} from "../../data";
 import useAdminResource from "../hooks/useAdminResource";
-import {productDraft, serverList} from "../lib/helpers";
+import usePagedResource from "../hooks/usePagedResource";
+import {productDraft, serverList, statusLabel, statusOptions, statusTone} from "../lib/helpers";
 import Badge from "../components/Badge";
 import DataToolbar from "../components/DataToolbar";
 import Empty from "../components/Empty";
 import Icon from "../components/Icon";
 import PageHead from "../components/PageHead";
+import Pagination from "../components/Pagination";
 import ProductEditor from "../components/ProductEditor";
 import ResourceState from "../components/ResourceState";
 
+const FILTERS = statusOptions("Semua status", ["DRAFT", "PUBLISHED", "ARCHIVED"]);
+
 function ProductsPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Semua status");
   const [editing, setEditing] = useState(null);
-  const resource = useAdminResource(() =>
-    Promise.all([
-      api.adminProducts({per_page: 100}),
-      api.adminBrands(),
-      api.adminCategories(),
-      api.adminSizes(),
-    ]).then(
-      ([
-        productsResponse,
-        brandsResponse,
-        categoriesResponse,
-        sizesResponse,
-      ]) => ({
+  const products = usePagedResource(api.adminProducts);
+  const lookups = useAdminResource(() =>
+    Promise.all([api.adminBrands(), api.adminCategories(), api.adminSizes()]).then(
+      ([brandsResponse, categoriesResponse, sizesResponse]) => ({
         data: {
-          products: serverList(productsResponse.data),
           brands: serverList(brandsResponse.data),
           categories: serverList(categoriesResponse.data),
           sizes: serverList(sizesResponse.data),
@@ -37,22 +29,12 @@ function ProductsPage() {
       }),
     ),
   );
-  const allRows = resource.data?.products || [];
-  const rows = allRows
-    .filter((item) =>
-      [
-        item.name,
-        item.slug,
-        item.brand?.name || "",
-        ...(item.variants || []).map((variant) => variant.sku),
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query.toLowerCase()),
-    )
-    .filter((item) => filter === "Semua status" || item.status === filter);
+  const rows = products.rows;
+  const filtered = Boolean(products.query || products.filter);
   const close = () => setEditing(null);
-  const refresh = () => resource.retry();
+  const refresh = () => products.retry();
+  const loading = products.loading || lookups.loading;
+  const error = products.error || lookups.error;
   return (
     <>
       <PageHead
@@ -61,11 +43,23 @@ function ProductsPage() {
         onAction={() => setEditing(productDraft())}
       />
       <DataToolbar
-        {...{query, setQuery, filter, setFilter}}
-        options={["Semua status", "DRAFT", "PUBLISHED", "ARCHIVED"]}
+        query={products.query}
+        setQuery={products.setQuery}
+        filter={products.filter}
+        setFilter={products.setFilter}
+        options={FILTERS}
+        placeholder="Cari nama, slug, merek, atau SKU…"
+        searchLabel="Cari produk"
       />
-      <ResourceState {...resource} />
-      {!resource.loading && !resource.error && (
+      <ResourceState
+        loading={loading}
+        error={error}
+        retry={() => {
+          products.retry();
+          lookups.retry();
+        }}
+      />
+      {!loading && !error && (
         <section className="adm-card adm-table-card">
           {rows.length ? (
             <div className="adm-table-wrap">
@@ -92,17 +86,7 @@ function ProductsPage() {
                         </small>
                       </td>
                       <td data-label="Status">
-                        <Badge
-                          tone={
-                            item.status === "PUBLISHED"
-                              ? "success"
-                              : item.status === "ARCHIVED"
-                                ? "danger"
-                                : "warning"
-                          }
-                        >
-                          {item.status}
-                        </Badge>
+                        <Badge tone={statusTone(item.status)}>{statusLabel(item.status)}</Badge>
                       </td>
                       <td data-label="Varian">
                         {item.variants?.filter((variant) => variant.is_active)
@@ -145,20 +129,21 @@ function ProductsPage() {
             <Empty
               title="Produk tidak ditemukan"
               text={
-                allRows.length
+                filtered
                   ? "Coba ubah pencarian atau filter."
                   : "Tambahkan produk pertama untuk mulai mengelola katalog."
               }
             />
           )}
+          <Pagination meta={products.meta} page={products.page} setPage={products.setPage} unit="produk" />
         </section>
       )}
-      {editing && resource.data && (
+      {editing && lookups.data && (
         <ProductEditor
           product={editing.id ? editing : null}
-          brands={resource.data.brands}
-          categories={resource.data.categories}
-          sizes={resource.data.sizes}
+          brands={lookups.data.brands}
+          categories={lookups.data.categories}
+          sizes={lookups.data.sizes}
           onClose={() => {
             close();
             refresh();
@@ -175,4 +160,3 @@ function ProductsPage() {
 }
 
 export default ProductsPage;
-

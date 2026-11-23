@@ -1,28 +1,26 @@
-import React, {useState} from "react";
+import React from "react";
 import {api} from "../../api";
-import useAdminResource from "../hooks/useAdminResource";
-import {serverList} from "../lib/helpers";
+import usePagedResource from "../hooks/usePagedResource";
 import DataToolbar from "../components/DataToolbar";
 import Empty from "../components/Empty";
 import PageHead from "../components/PageHead";
+import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 
 function AuditPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Semua tindakan");
-  const resource = useAdminResource(() => api.adminAuditLogs({per_page: 100}));
-  const rows = serverList(resource.data).filter((item) =>
-    [item.action, item.entity_type || ""]
-      .join(" ")
-      .toLowerCase()
-      .includes(query.toLowerCase()),
-  );
+  const resource = usePagedResource(api.adminAuditLogs, {perPage: 50});
+  const rows = resource.rows;
   return (
     <>
       <PageHead section="audit" />
       <DataToolbar
-        {...{query, setQuery, filter, setFilter}}
-        options={["Semua tindakan"]}
+        query={resource.query}
+        setQuery={resource.setQuery}
+        filter={resource.filter}
+        setFilter={resource.setFilter}
+        options={[["", "Semua tindakan"]]}
+        placeholder="Cari tindakan atau objek…"
+        searchLabel="Cari audit log"
       />
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
@@ -65,6 +63,7 @@ function AuditPage() {
           ) : (
             <Empty text="Belum ada mutasi admin yang tercatat." />
           )}
+          <Pagination meta={resource.meta} page={resource.page} setPage={resource.setPage} unit="catatan" />
         </section>
       )}
     </>

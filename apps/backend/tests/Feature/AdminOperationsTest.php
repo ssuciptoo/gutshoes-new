@@ -106,3 +106,30 @@ it('rejects percentage promotions and vouchers above 100', function () {
     $this->actingAs($admin)->postJson('/api/v1/admin/promotions', $promotion + ['type' => 'FIXED_AMOUNT', 'value' => 150000])->assertCreated();
     $this->actingAs($admin)->postJson('/api/v1/admin/vouchers', $voucher + ['type' => 'PERCENTAGE', 'value' => 100])->assertCreated();
 });
+
+it('searches admin listings on the server and filters inventory by stock level', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    User::factory()->create(['role' => UserRole::CUSTOMER, 'name' => 'Budi Santoso', 'email' => 'budi@example.test']);
+    User::factory()->create(['role' => UserRole::CUSTOMER, 'name' => 'Sari', 'email' => 'sari@example.test']);
+    $this->actingAs($admin)->getJson('/api/v1/admin/customers?search=budi')->assertOk()
+        ->assertJsonCount(1, 'data')->assertJsonPath('data.0.email', 'budi@example.test')->assertJsonPath('meta.total', 1);
+    $this->actingAs($admin)->getJson('/api/v1/admin/customers?search=%25')->assertOk()->assertJsonCount(0, 'data');
+
+    StoreConfiguration::create(['key' => 'low_stock_threshold', 'value' => 3, 'is_public' => false, 'updated_by' => $admin->id]);
+    Inventory::factory()->create(['on_hand' => 2, 'reserved' => 2]);
+    Inventory::factory()->create(['on_hand' => 4, 'reserved' => 1]);
+    Inventory::factory()->create(['on_hand' => 20, 'reserved' => 0]);
+    $this->actingAs($admin)->getJson('/api/v1/admin/inventories?stock=out')->assertOk()->assertJsonCount(1, 'data');
+    $this->actingAs($admin)->getJson('/api/v1/admin/inventories?stock=low')->assertOk()->assertJsonCount(1, 'data');
+    $this->actingAs($admin)->getJson('/api/v1/admin/inventories?stock=available')->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('stores voucher periods sent as ISO timestamps and returns them as ISO', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $response = $this->actingAs($admin)->postJson('/api/v1/admin/vouchers', [
+        'code' => 'HEMAT10', 'name' => 'Hemat', 'type' => 'PERCENTAGE', 'value' => 10, 'minimum_amount' => 0,
+        'starts_at' => '2026-11-23T03:00:00.000Z', 'ends_at' => '2026-12-23T03:00:00.000Z', 'is_active' => true, 'product_ids' => [],
+    ])->assertCreated();
+    expect($response->json('data.starts_at'))->toStartWith('2026-11-23T03:00:00');
+    $this->actingAs($admin)->getJson('/api/v1/admin/vouchers?search=hemat')->assertOk()->assertJsonCount(1, 'data');
+});

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import './assets/styles/admin.css';
 import './assets/styles/admin-completion.css';
-import { api, ApiError } from './api';
+import { ADMIN_SESSION_EXPIRED, api, ApiError } from './api';
 import AdminPanel from './AdminPanel';
 import logoGutShoes from './assets/logo-gutshoes.webp';
 import {forgetAdminSession, readAdminSession, rememberAdminSession} from './lib/adminSession';
@@ -26,6 +26,11 @@ export default function ProtectedAdmin(props){
     }).finally(()=>{if(active)setChecking(false)});
     return()=>{active=false};
   },[cachedSession]);
+  useEffect(()=>{
+    const expire=()=>{forgetAdminSession();setAuthenticated(false);setError('Sesi admin berakhir. Silakan masuk kembali.')};
+    window.addEventListener(ADMIN_SESSION_EXPIRED,expire);
+    return()=>window.removeEventListener(ADMIN_SESSION_EXPIRED,expire);
+  },[]);
   const submit=async event=>{event.preventDefault();setError('');setLoading(true);const data=new FormData(event.currentTarget);try{const response=await api.adminLogin({email:data.get('email'),password:data.get('password')});if(response.data.role!=='ADMIN')throw new ApiError('Akun ini bukan administrator.',403,{});rememberAdminSession();setAuthenticated(true)}catch(err){forgetAdminSession();setError(err instanceof ApiError?err.message:'Server tidak dapat dijangkau. Coba lagi.')}finally{setLoading(false)}};
   if(checking)return <main className="admin-session-pending" aria-label="Memuat admin" aria-busy="true"><span className="action-spinner"/><span className="sr-only">Memeriksa sesi admin</span></main>;
   if(authenticated)return <AdminPanel {...props}/>;

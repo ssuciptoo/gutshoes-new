@@ -15,6 +15,12 @@ const Icon = ({name, size = 19}) => {
         <path d="m4 7 8-4 8 4-8 4-8-4ZM4 7v10l8 4 8-4V7M12 11v10" />
       </>
     ),
+    refund: (
+      <>
+        <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+        <path d="M3 3v5h5M12 7v5l3 2" />
+      </>
+    ),
     layers: (
       <>
         <path d="m12 2 9 5-9 5-9-5 9-5Z" />

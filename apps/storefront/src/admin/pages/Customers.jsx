@@ -1,17 +1,16 @@
 import React, {useState} from "react";
 import {api} from "../../api";
 import {rupiah} from "../../data";
-import useAdminResource from "../hooks/useAdminResource";
-import {serverList} from "../lib/helpers";
+import usePagedResource from "../hooks/usePagedResource";
+import {statusLabel, statusTone} from "../lib/helpers";
 import Badge from "../components/Badge";
 import DataToolbar from "../components/DataToolbar";
 import Empty from "../components/Empty";
 import PageHead from "../components/PageHead";
+import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 
 function CustomersPage() {
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("Semua pelanggan");
   const [detail, setDetail] = useState(null);
   const [detailError, setDetailError] = useState("");
   const openDetail = async (id) => {
@@ -19,21 +18,22 @@ function CustomersPage() {
     try { setDetail((await api.adminCustomer(id)).data); }
     catch (error) { setDetailError(error.message || "Detail pelanggan gagal dimuat."); }
   };
-  const resource = useAdminResource(() => api.adminCustomers({per_page: 100}));
-  const rows = serverList(resource.data).filter((item) =>
-    [item.name || "", item.email]
-      .join(" ")
-      .toLowerCase()
-      .includes(query.toLowerCase()),
-  );
+  const resource = usePagedResource(api.adminCustomers);
+  const rows = resource.rows;
   return (
     <>
       <PageHead section="customers" />
       <DataToolbar
-        {...{query, setQuery, filter, setFilter}}
-        options={["Semua pelanggan"]}
+        query={resource.query}
+        setQuery={resource.setQuery}
+        filter={resource.filter}
+        setFilter={resource.setFilter}
+        options={[["", "Semua pelanggan"]]}
+        placeholder="Cari nama atau email…"
+        searchLabel="Cari pelanggan"
       />
       <ResourceState {...resource} />
+      {detailError && <div className="adm-feedback error" role="alert">{detailError}</div>}
       {!resource.loading && !resource.error && (
         <section className="adm-card adm-table-card">
           {rows.length ? (
@@ -69,11 +69,11 @@ function CustomersPage() {
               </table>
             </div>
           ) : (
-            <Empty text="Belum ada pelanggan tersimpan." />
+            <Empty text={resource.query ? "Pelanggan tidak ditemukan." : "Belum ada pelanggan tersimpan."} />
           )}
+          <Pagination meta={resource.meta} page={resource.page} setPage={resource.setPage} unit="pelanggan" />
         </section>
       )}
-      {detailError && <p role="alert">{detailError}</p>}
       {detail && (
         <div className="adm-overlay" onClick={() => setDetail(null)}>
           <aside className="adm-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
@@ -81,7 +81,7 @@ function CustomersPage() {
             <section><h3>Kontak</h3><p>{detail.customer?.email}<br />{detail.customer?.customer_profile?.phone || "Telepon belum tersedia"}</p></section>
             <section><h3>Ringkasan</h3><div className="adm-line-item"><span>Jumlah pesanan<small>{detail.summary?.order_count || 0}</small></span><strong>{rupiah(Number(detail.summary?.paid_total || 0))}</strong></div></section>
             <section><h3>Alamat</h3>{detail.customer?.addresses?.length ? detail.customer.addresses.map((address) => <p key={address.id}>{address.label}: {address.address_line}, {address.district}, {address.city} {address.postal_code}</p>) : <p>Belum ada alamat.</p>}</section>
-            <section><h3>Pesanan terakhir</h3>{detail.orders?.length ? detail.orders.map((order) => <div className="adm-line-item" key={order.id}><span>{order.order_number}<small>{order.status}</small></span><strong>{rupiah(Number(order.grand_total || 0))}</strong></div>) : <p>Belum ada pesanan.</p>}</section>
+            <section><h3>Pesanan terakhir</h3>{detail.orders?.length ? detail.orders.map((order) => <div className="adm-line-item" key={order.id}><span>{order.order_number}<small><Badge tone={statusTone(order.status)}>{statusLabel(order.status)}</Badge></small></span><strong>{rupiah(Number(order.grand_total || 0))}</strong></div>) : <p>Belum ada pesanan.</p>}</section>
           </aside>
         </div>
       )}

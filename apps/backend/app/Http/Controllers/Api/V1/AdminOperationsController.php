@@ -54,7 +54,7 @@ class AdminOperationsController extends Controller
 
     public function orders(Request $request): JsonResponse
     {
-        return $this->listing(Order::query()->with(['payment', 'shipment']), $request, ['status', 'customer_email', 'order_number'], 'created_at');
+        return $this->listing(Order::query()->with(['payment', 'shipment']), $request, ['status', 'customer_email', 'order_number'], 'created_at', ['order_number', 'customer_name', 'customer_email']);
     }
 
     public function order(Order $order): JsonResponse
@@ -79,12 +79,18 @@ class AdminOperationsController extends Controller
 
     public function refunds(Request $request): JsonResponse
     {
-        return $this->listing(Refund::query()->with(['order', 'payment']), $request, ['status'], 'created_at');
+        $query = Refund::query()->with(['order', 'payment']);
+        if ($request->filled('search')) {
+            $term = $this->likeTerm($request->input('search'));
+            $query->whereHas('order', fn (Builder $q) => $q->where('order_number', 'like', $term)->orWhere('customer_email', 'like', $term));
+        }
+
+        return $this->listing($query, $request, ['status'], 'created_at');
     }
 
     public function customers(Request $request): JsonResponse
     {
-        return $this->listing(User::query()->where('role', 'CUSTOMER'), $request, ['email'], 'created_at');
+        return $this->listing(User::query()->where('role', 'CUSTOMER'), $request, ['email'], 'created_at', ['name', 'email']);
     }
 
     public function customer(User $customer): JsonResponse
@@ -123,22 +129,37 @@ class AdminOperationsController extends Controller
 
     public function auditLogs(Request $request): JsonResponse
     {
-        return $this->listing(AuditLog::query(), $request, ['admin_id', 'action', 'entity_type'], 'created_at');
+        return $this->listing(AuditLog::query(), $request, ['admin_id', 'action', 'entity_type'], 'created_at', ['action', 'entity_type', 'description']);
     }
 
     public function promotions(Request $request): JsonResponse
     {
-        return $this->listing(Promotion::query(), $request, ['type', 'is_active'], 'priority');
+        return $this->listing(Promotion::query()->with('products:id,name'), $request, ['type', 'is_active'], 'priority', ['name']);
     }
 
     public function vouchers(Request $request): JsonResponse
     {
-        return $this->listing(Voucher::query(), $request, ['type', 'is_active', 'code'], 'created_at');
+        return $this->listing(Voucher::query()->with('products:id,name'), $request, ['type', 'is_active', 'code'], 'created_at', ['code', 'name']);
     }
 
     public function inventories(Request $request): JsonResponse
     {
-        return $this->listing(Inventory::query()->with(['warehouse', 'variant.product', 'variant.size']), $request, ['warehouse_id', 'product_variant_id'], 'updated_at');
+        $query = Inventory::query()->with(['warehouse', 'variant.product', 'variant.size']);
+        if ($request->filled('search')) {
+            $term = $this->likeTerm($request->input('search'));
+            $query->where(fn (Builder $q) => $q
+                ->whereHas('variant', fn (Builder $v) => $v->where('sku', 'like', $term)->orWhereHas('product', fn (Builder $p) => $p->where('name', 'like', $term)))
+                ->orWhereHas('warehouse', fn (Builder $w) => $w->where('name', 'like', $term)));
+        }
+        $threshold = (int) (StoreConfiguration::where('key', 'low_stock_threshold')->value('value') ?? 5);
+        match ($request->input('stock')) {
+            'out' => $query->whereRaw('on_hand - reserved <= 0'),
+            'low' => $query->whereRaw('on_hand - reserved > 0')->whereRaw('on_hand - reserved <= ?', [$threshold]),
+            'available' => $query->whereRaw('on_hand - reserved > ?', [$threshold]),
+            default => null,
+        };
+
+        return $this->listing($query, $request, ['warehouse_id', 'product_variant_id'], 'updated_at');
     }
 
     public function inventoryOptions(): JsonResponse
@@ -245,8 +266,16 @@ class AdminOperationsController extends Controller
      * @param Builder<*> $query
      * @param  list<string>  $filters
      */
-    private function listing(Builder $query, Request $request, array $filters, string $defaultSort): JsonResponse
+    private function listing(Builder $query, Request $request, array $filters, string $defaultSort, array $searchable = []): JsonResponse
     {
+        if ($searchable !== [] && $request->filled('search')) {
+            $term = $this->likeTerm($request->input('search'));
+            $query->where(function (Builder $q) use ($searchable, $term): void {
+                foreach ($searchable as $column) {
+                    $q->orWhere($column, 'like', $term);
+                }
+            });
+        }
         foreach ($filters as $filter) {
             if ($request->filled($filter)) {
                 $query->where($filter, $request->input($filter));
@@ -257,5 +286,10 @@ class AdminOperationsController extends Controller
         $page = $query->orderBy($sort, $direction)->paginate(min(max((int) $request->input('per_page', 15), 1), 100));
 
         return response()->json(['data' => $page->items(), 'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'per_page' => $page->perPage(), 'total' => $page->total()]]);
+    }
+
+    private function likeTerm(mixed $value): string
+    {
+        return '%'.addcslashes(mb_substr(trim((string) $value), 0, 100), '%_\\').'%';
     }
 }

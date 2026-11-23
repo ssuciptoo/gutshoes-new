@@ -1,12 +1,48 @@
-export const statusTone = (s) =>
-  s.includes("diperlukan") || s.includes("Refund")
-    ? "danger"
-    : s.includes("Lunas") || s.includes("Dikirim") || s.includes("Aktif")
-      ? "success"
-      : s.includes("Menunggu")
-        ? "warning"
-        : "info";
+// Kode status dari API → [label Indonesia, tone badge].
+const STATUS = {
+  // Pesanan
+  PENDING_PAYMENT: ["Menunggu pembayaran", "warning"],
+  PAID: ["Lunas", "success"],
+  PROCESSING: ["Diproses", "info"],
+  SHIPPED: ["Dikirim", "info"],
+  DELIVERED: ["Diterima", "success"],
+  CANCELLED: ["Dibatalkan", "danger"],
+  EXPIRED: ["Kedaluwarsa", "danger"],
+  REFUNDED: ["Dikembalikan", "danger"],
+  // Pembayaran & refund
+  PENDING: ["Menunggu", "warning"],
+  REQUESTED: ["Diajukan", "warning"],
+  SUCCESS: ["Berhasil", "success"],
+  FAILED: ["Gagal", "danger"],
+  // Produk
+  DRAFT: ["Draf", "warning"],
+  PUBLISHED: ["Dipublikasikan", "success"],
+  ARCHIVED: ["Diarsipkan", "danger"],
+  // Jenis diskon
+  PERCENTAGE: ["Persentase", "info"],
+  FIXED_AMOUNT: ["Potongan nominal", "info"],
+  FREE_SHIPPING: ["Gratis ongkir", "info"],
+};
+const humanize = (code) =>
+  code.charAt(0) + code.slice(1).toLowerCase().replaceAll("_", " ");
+export const statusLabel = (code) =>
+  code ? STATUS[code]?.[0] || humanize(String(code)) : "Belum ada";
+export const statusTone = (code) => STATUS[code]?.[1] || "info";
+// Opsi filter: [value, label]; value "" berarti semua.
+export const statusOptions = (allLabel, codes) => [
+  ["", allLabel],
+  ...codes.map((code) => [code, statusLabel(code)]),
+];
 export const serverList = (data) => (Array.isArray(data) ? data : data?.data || []);
+// Mendukung {data, meta} (listing admin) maupun paginator Laravel di dalam data.
+export const serverMeta = (response) => {
+  const source = response?.meta || response?.data || {};
+  return {
+    page: Number(source.current_page || 1),
+    lastPage: Number(source.last_page || 1),
+    total: Number(source.total ?? serverList(response?.data).length),
+  };
+};
 export function productDraft(product) {
   return product
     ? {

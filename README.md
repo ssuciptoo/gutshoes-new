@@ -42,3 +42,8 @@ Backend Laravel di `apps/backend` berkomunikasi dengan storefront melalui REST A
 5. Deploy isi `apps/storefront/dist` ke hosting statis dan arahkan API serta callback provider ke layanan staging. Verifikasi login/cookie, CORS, checkout sandbox, dan webhook sebelum UAT.
 
 URL hosting belum dipilih; `example.com` pada template adalah placeholder dan harus diganti sebelum build.
+
+## Akun Admin
+
+Email: gutshoes@email.com
+Password: Gutshoes@123

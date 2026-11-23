@@ -3,6 +3,8 @@ const API_BASE = (
 ).replace(/\/$/, "");
 const BACKEND_BASE = API_BASE.replace(/\/api\/v1$/, "");
 
+export const ADMIN_SESSION_EXPIRED = "gutshoes:admin-session-expired";
+
 export class ApiError extends Error {
   constructor(message, status, body, cause) {
     super(message, {cause});
@@ -82,6 +84,14 @@ async function request(path, options = {}, retried = false) {
   if (response.status === 419 && !retried) {
     await csrf();
     return request(path, options, true);
+  }
+  // Sesi admin habis atau dicabut: beri tahu ProtectedAdmin agar kembali ke form login.
+  if (
+    (response.status === 401 || response.status === 403) &&
+    path.startsWith("/admin/") &&
+    !path.startsWith("/admin/auth/")
+  ) {
+    window.dispatchEvent(new CustomEvent(ADMIN_SESSION_EXPIRED));
   }
   if (!response.ok)
     throw new ApiError(
@@ -198,6 +208,22 @@ export const api = {
     request(`/admin/promotions?${new URLSearchParams(params).toString()}`),
   adminVouchers: (params) =>
     request(`/admin/vouchers?${new URLSearchParams(params).toString()}`),
+  savePromotion: (id, data) =>
+    request(id ? `/admin/promotions/${id}` : "/admin/promotions", {
+      method: id ? "PUT" : "POST",
+      body: data,
+    }),
+  deletePromotion: (id) => request(`/admin/promotions/${id}`, {method: "DELETE"}),
+  saveVoucher: (id, data) =>
+    request(id ? `/admin/vouchers/${id}` : "/admin/vouchers", {
+      method: id ? "PUT" : "POST",
+      body: data,
+    }),
+  deleteVoucher: (id) => request(`/admin/vouchers/${id}`, {method: "DELETE"}),
+  adminRefunds: (params) =>
+    request(`/admin/refunds?${new URLSearchParams(params).toString()}`),
+  processRefund: (id) =>
+    request(`/admin/refunds/${id}/process`, {method: "POST"}),
   adminConfigurations: () => request("/admin/configurations"),
   adminAuditLogs: (params) =>
     request(`/admin/audit-logs?${new URLSearchParams(params).toString()}`),

@@ -5,6 +5,7 @@ import Catalog from "../admin/pages/Catalog";
 import Sizes from "../admin/pages/Sizes";
 import Inventory from "../admin/pages/Inventory";
 import Orders from "../admin/pages/Orders";
+import Refunds from "../admin/pages/Refunds";
 import Customers from "../admin/pages/Customers";
 import Promotions from "../admin/pages/Promotions";
 import Settings from "../admin/pages/Settings";
@@ -21,6 +22,7 @@ export const adminRoutes = [
   {section: "sizes", path: "/admin/sizes", render: () => <Sizes />},
   {section: "inventory", path: "/admin/inventory", render: () => <Inventory />},
   {section: "orders", path: "/admin/orders", render: () => <Orders />},
+  {section: "refunds", path: "/admin/refunds", render: () => <Refunds />},
   {section: "customers", path: "/admin/customers", render: () => <Customers />},
   {
     section: "promotions",

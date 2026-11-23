@@ -27,9 +27,14 @@ function DataToolbar({
         onChange={(e) => setFilter(e.target.value)}
         aria-label={filterLabel}
       >
-        {options.map((x) => (
-          <option key={x}>{x}</option>
-        ))}
+        {options.map((option) => {
+          const [value, label] = Array.isArray(option) ? option : [option, option];
+          return (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          );
+        })}
       </select>
     </div>
   );

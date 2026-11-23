@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {api} from "../../api";
 import {rupiah} from "../../data";
-import {apiErrorMessage, statusTone} from "../lib/helpers";
+import {apiErrorMessage, statusLabel, statusTone} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
 import Badge from "./Badge";
 import Button from "./Button";
@@ -143,10 +143,10 @@ function OrderDrawer({order, onClose, onUpdated}) {
           detail && (
             <>
               <div className="adm-drawer-status">
-                <Badge tone={statusTone(detail.payment?.status || "")}>
-                  {detail.payment?.status || "Belum ada pembayaran"}
+                <Badge tone={statusTone(detail.payment?.status)}>
+                  Pembayaran: {detail.payment?.status ? statusLabel(detail.payment.status) : "belum ada"}
                 </Badge>
-                <Badge tone={statusTone(status)}>{status}</Badge>
+                <Badge tone={statusTone(status)}>{statusLabel(status)}</Badge>
               </div>
               <section>
                 <h3>Pelanggan</h3>
@@ -264,6 +264,12 @@ function OrderDrawer({order, onClose, onUpdated}) {
                         placeholder="Masukkan nomor resi dari kurir"
                       />
                     </label>
+                  )}
+                  {action === "cancel" && status === "PAID" && (
+                    <p className="adm-muted-copy">
+                      Pesanan ini sudah dibayar. Pembatalan akan membuat refund
+                      yang perlu diproses di halaman Refund.
+                    </p>
                   )}
                   {action === "cancel" ? (
                     <label>

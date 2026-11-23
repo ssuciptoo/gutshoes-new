@@ -18,7 +18,12 @@ class AdminProductController extends Controller
     {
         $data = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'status' => ['nullable', 'in:DRAFT,PUBLISHED,ARCHIVED'], 'per_page' => ['nullable', 'integer', 'min:1', 'max:100']]);
         $query = Product::with(['brand', 'categories', 'variants.size', 'images'])->latest();
-        $query->when($data['search'] ?? null, fn ($q, $term) => $q->where('name', 'like', "%{$term}%"));
+        $query->when($data['search'] ?? null, function ($q, $term): void {
+            $like = '%'.addcslashes($term, '%_\\').'%';
+            $q->where(fn ($inner) => $inner->where('name', 'like', $like)->orWhere('slug', 'like', $like)
+                ->orWhereHas('variants', fn ($v) => $v->where('sku', 'like', $like))
+                ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', $like)));
+        });
         $query->when($data['status'] ?? null, fn ($q, $status) => $q->where('status', $status));
 
         return response()->json(['data' => $query->paginate($data['per_page'] ?? 25)]);

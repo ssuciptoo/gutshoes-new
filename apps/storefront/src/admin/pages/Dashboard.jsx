@@ -117,6 +117,19 @@ function Dashboard({navigate}) {
               <b>{data.low_stock_count || 0}</b>
               <Icon name="arrow" />
             </button>
+            {Number(data.operations?.refunds_pending || 0) > 0 && (
+              <button onClick={() => navigate("refunds")}>
+                <span className="adm-priority-icon danger">
+                  <Icon name="refund" />
+                </span>
+                <span>
+                  <strong>Proses refund tertunda</strong>
+                  <small>Dana pelanggan belum dikembalikan</small>
+                </span>
+                <b>{data.operations.refunds_pending}</b>
+                <Icon name="arrow" />
+              </button>
+            )}
           </section>
         </>
       )}

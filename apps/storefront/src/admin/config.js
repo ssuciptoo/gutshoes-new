@@ -16,6 +16,7 @@ export const navGroups = [
     label: "Penjualan",
     items: [
       ["orders", "orders", "Pesanan"],
+      ["refunds", "refund", "Refund"],
       ["customers", "users", "Pelanggan"],
       ["promotions", "tag", "Promosi"],
     ],
@@ -45,7 +46,11 @@ export const titles = {
   ],
   orders: [
     "Pesanan",
-    "Proses pesanan, pembayaran, pengiriman, pembatalan, dan refund.",
+    "Proses pesanan, pembayaran, pengiriman, dan pembatalan.",
+  ],
+  refunds: [
+    "Refund",
+    "Proses pengembalian dana untuk pesanan lunas yang dibatalkan.",
   ],
   customers: [
     "Pelanggan",

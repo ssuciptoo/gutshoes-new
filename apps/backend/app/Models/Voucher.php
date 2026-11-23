@@ -13,6 +13,11 @@ class Voucher extends Model
 
     protected $guarded = [];
 
+    protected function casts(): array
+    {
+        return ['starts_at' => 'datetime', 'ends_at' => 'datetime', 'is_active' => 'boolean', 'value' => 'decimal:2', 'minimum_amount' => 'decimal:2', 'maximum_discount' => 'decimal:2'];
+    }
+
     /** @return BelongsToMany<Product,$this> */
     public function products(): BelongsToMany
     {
