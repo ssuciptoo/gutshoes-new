@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import {api, isBackendUnavailable} from "../api";
-import {rupiah} from "../data";
+import {rupiah} from "../lib/currency";
 import RegionFields from "../components/forms/RegionFields";
 import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
@@ -21,7 +21,6 @@ function Checkout({
   user,
   addresses,
   onCheckoutCreated,
-  cartSource,
   ensureServerCart,
 }) {
   const [step, setStep] = useState(1);
@@ -32,7 +31,6 @@ function Checkout({
   const [pricing, setPricing] = useState(null);
   const [voucher, setVoucher] = useState("");
   const [appliedVoucher, setAppliedVoucher] = useState("");
-  const [mode, setMode] = useState(cartSource);
   const [operation, setOperation] = useState("");
   const [error, setError] = useState("");
   const [invalidFields, setInvalidFields] = useState([]);
@@ -77,7 +75,6 @@ function Checkout({
     setError("");
     setInvalidFields([]);
     try {
-      if (cartSource !== "api") throw new Error("Keranjang belum siap. Muat ulang lalu coba lagi.");
       const serverCart = await ensureServerCart();
       const response = await api.quote(
         quotePayload(service, code),
@@ -92,7 +89,6 @@ function Checkout({
       setServerShipping(response.data.shipping);
       setShippingOptions(response.data.shipping_options || [response.data.shipping]);
       setShippingService(shippingKey(response.data.shipping));
-      setMode("api");
       setAppliedVoucher(code);
       return true;
     } catch (err) {
@@ -181,7 +177,6 @@ function Checkout({
       setServerShipping(response.data.shipping);
       setShippingOptions(response.data.shipping_options || [response.data.shipping]);
       setShippingService(shippingKey(response.data.shipping));
-      setMode("api");
       setStep(2);
     } catch (err) {
       setPricing(null);
@@ -223,7 +218,7 @@ function Checkout({
     voucher_code: appliedVoucher || null,
   };
   const submitOrder = async () => {
-    if (submittingOrder.current || operation || (!orderAttempt.current && (!buyer || mode !== "api" || !pricing))) return;
+    if (submittingOrder.current || operation || (!orderAttempt.current && (!buyer || !pricing))) return;
     submittingOrder.current = true;
     setOperation("order");
     setError("");
@@ -247,7 +242,6 @@ function Checkout({
         email: created.data.customer_email,
         accessToken,
         customerType,
-        source: "api",
         paymentStatus: "initializing",
         status: "PENDING_PAYMENT",
         createdAt: new Date().toISOString(),
@@ -257,7 +251,7 @@ function Checkout({
       try {
         if (customerType === "guest" && !accessToken)
           throw new Error(
-            "Token pemulihan guest tidak diterima. Simpan nomor order dan hubungi dukungan.",
+            "Pesanan sudah dibuat, tetapi halaman pembayaran belum bisa dibuka. Simpan nomor pesanan ini dan buka tautan di email konfirmasi.",
           );
         const payment =
           customerType === "guest"
@@ -343,17 +337,9 @@ function Checkout({
       </div>
       <div className="checkout-layout">
         <section className="checkout-form" aria-busy={busy}>
-          <div className={`checkout-mode ${mode}`} role="status">
-            <strong>
-              {mode === "api"
-                ? "Checkout aman"
-                : "Mode demo — tanpa transaksi nyata"}
-            </strong>
-            <span>
-              {mode === "api"
-                ? "Harga, ongkir, dan diskon dihitung ulang sebelum pesanan dibuat."
-                : "Ongkir dan voucher hanya simulasi."}
-            </span>
+          <div className="checkout-mode api" role="status">
+            <strong>Checkout aman</strong>
+            <span>Harga, ongkir, dan diskon dihitung ulang sebelum pesanan dibuat.</span>
           </div>
           {step === 1 && (
             <form ref={checkoutFormRef} onSubmit={next}>
@@ -474,11 +460,9 @@ function Checkout({
             <div>
               <h2>Pilih layanan pengiriman</h2>
               <p>
-                {mode === "api"
-                  ? serverShipping?.provider === "GUTSHOES_REGIONAL"
-                    ? "Tujuan di luar Jabodetabek memakai tarif regional tetap per item dan seluruh ongkir dibayar pembeli."
-                    : "Tarif Jabodetabek divalidasi melalui provider pengiriman berdasarkan keranjang dan tujuan."
-                  : "Tarif di bawah adalah angka demo dan tidak mengikat."}
+                {serverShipping?.provider === "GUTSHOES_REGIONAL"
+                  ? "Tujuan di luar Jabodetabek memakai tarif regional tetap per item dan seluruh ongkir dibayar pembeli."
+                  : "Pilih kurir yang kamu suka. Biaya dihitung dari berat paket dan alamat tujuan."}
               </p>
               <div className="shipping-options">
                 {serverShipping?.provider === "GUTSHOES_REGIONAL" ? (
@@ -579,9 +563,7 @@ function Checkout({
             <div>
               <h2>Metode pembayaran</h2>
               <p>
-                {mode === "api"
-                  ? "Pesananmu dibuat lebih dulu, lalu kamu diarahkan ke halaman pembayaran Midtrans."
-                  : "Mode demo tidak membuka halaman pembayaran."}
+                Pesananmu dibuat lebih dulu, lalu kamu diarahkan ke halaman pembayaran Midtrans.
               </p>
               <div className="payment-choice selected">
                 <span className="midtrans-mark">M</span>
@@ -612,25 +594,21 @@ function Checkout({
                 >
                   Kembali
                 </Button>
-                {mode === "api" ? (
-                  <Button
-                    onClick={submitOrder}
-                    disabled={busy}
-                    aria-busy={busy}
-                  >
-                    {operation === "order" ? (
-                      "Membuat pesanan…"
-                    ) : operation === "payment" ? (
-                      "Menyiapkan pembayaran…"
-                    ) : (
-                      <>
-                        Buat pesanan & lanjut bayar <Icon name="arrow" />
-                      </>
-                    )}
-                  </Button>
-                ) : (
-                  <Button disabled>Pembayaran belum tersedia</Button>
-                )}
+                <Button
+                  onClick={submitOrder}
+                  disabled={busy}
+                  aria-busy={busy}
+                >
+                  {operation === "order" ? (
+                    "Membuat pesanan…"
+                  ) : operation === "payment" ? (
+                    "Menyiapkan pembayaran…"
+                  ) : (
+                    <>
+                      Buat pesanan & lanjut bayar <Icon name="arrow" />
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
@@ -638,7 +616,6 @@ function Checkout({
         <OrderSummary
           cart={cart}
           pricing={shownPricing}
-          source={mode}
           totalLabel="Total pembayaran"
         />
       </div>

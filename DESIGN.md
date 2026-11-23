@@ -274,5 +274,16 @@ Packshot tunggal berada pada bidang netral rasio 4:3. Metadata merek dan stok mu
 - **Don't** mengganti cyan merek dengan banyak aksen bersaing.
 - **Don't** memakai geometri miring khas hero sebagai pola dekoratif di setiap komponen.
 - **Don't** menyembunyikan ukuran dan harga di balik interaksi sekunder pada alur pembelian.
-- **Don't** membuat login terlihat seperti form kata sandi lokal; implementasi saat ini hanya menyediakan jalur Google demonstratif.
-- **Don't** menampilkan riwayat, profil, atau alamat sebagai data tervalidasi server ketika masih berasal dari sesi demo.
+- **Don't** membuat form kata sandi lokal untuk pelanggan; login pelanggan memakai jendela Clerk (Google atau email), admin tetap memakai email + kata sandi.
+- **Don't** menampilkan data akun, pesanan, atau stok dari salinan lokal; semuanya dimuat dari API toko.
+
+## Arah desain awal
+
+Catatan ini sebelumnya tersimpan sebagai komentar di `index.html` (sekarang dipindahkan ke sini agar tidak ikut terbit di halaman publik).
+
+- **Tesis:** toko sepatu modern yang membuat produk, harga, ukuran, dan biaya mudah dipahami; menolak storefront yang bergantung pada promo palsu.
+- **Dunia visual:** bidang putih terang, tinta gelap, cyan GutShoes, garis tipis, foto produk bersih, dan sudut 14px.
+- **Cerita:** pengunjung menemukan aktivitas, membandingkan sepatu, memilih ukuran, membayar, lalu melacak pesanannya.
+- **Layar pertama:** header utilitarian, hero produk split 58/42, kategori cepat, lalu awal rak empat produk; CTA di sisi kiri hero.
+- **Bentuk:** standar toko sepatu modern, pilihan kanonis.
+- **Penyelesaian:** setiap aset raster yang dikirim membawa catatan asal-usul (`*.json` di samping file).

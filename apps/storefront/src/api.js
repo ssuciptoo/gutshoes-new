@@ -117,6 +117,7 @@ async function request(path, options = {}, retried = false) {
 
 export const backendBaseUrl = BACKEND_BASE;
 export const api = {
+  storeInfo: () => request("/store-info"),
   provinces: () => request("/regions/provinces"),
   regencies: (code) =>
     request("/regions/regencies?province_code=" + encodeURIComponent(code)),
@@ -277,6 +278,8 @@ export const api = {
     request(`/admin/inventories/${id}/adjust`, {method: "PATCH", body: data}),
   fulfillOrder: (id, data) =>
     request(`/admin/orders/${id}/fulfillment`, {method: "PATCH", body: data}),
+  updateConfigurations: (values) =>
+    request("/admin/configurations", {method: "PUT", body: {values}}),
   updateConfiguration: (key, data) =>
     request(`/admin/configurations/${encodeURIComponent(key)}`, {
       method: "PUT",

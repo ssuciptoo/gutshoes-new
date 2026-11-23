@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {api} from "../../api";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 import usePagedResource from "../hooks/usePagedResource";
 import {apiErrorMessage, statusLabel, statusOptions, statusTone} from "../lib/helpers";
 import Badge from "../components/Badge";

@@ -1,0 +1,7 @@
+{
+  "file": "public/og-image.jpg",
+  "derivedFrom": "src/assets/products/hero-running.webp",
+  "transform": "sharp: resize 1200x630 cover (centre), flatten on #ffffff, JPEG quality 82 (mozjpeg)",
+  "purpose": "Gambar pratinjau Open Graph saat tautan toko dibagikan",
+  "createdAt": "2026-11-23T00:00:00.000Z"
+}

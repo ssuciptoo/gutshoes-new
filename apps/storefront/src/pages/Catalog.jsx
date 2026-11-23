@@ -38,6 +38,9 @@ function Catalog({query, setQuery, openProduct, initialFilter}) {
     setQuery(""); setSearch(""); setCategory(""); setBrand("");
     setPriceBand("all"); setSelectedSize(null); setPagination({key: "", page: 1});
   };
+  const activeSearch = query.trim();
+  const hasFilters = Boolean(activeSearch || category || brand || priceBand !== "all" || selectedSize);
+  const resultCount = meta?.total || 0;
   const goToPage = (next) => {
     setPagination({key: filterKey, page: next});
     window.scrollTo({top: 0, behavior: "instant"});
@@ -112,20 +115,35 @@ function Catalog({query, setQuery, openProduct, initialFilter}) {
           ))}
         </div>
       </fieldset>
+      {/* Hanya tampil di layar kecil, saat filter berupa panel penuh. */}
+      <div className="filters__footer">
+        {hasFilters && (
+          <button type="button" className="text-link" onClick={reset}>
+            Hapus filter
+          </button>
+        )}
+        <Button onClick={() => setMobileFilters(false)} disabled={loading}>
+          {loading ? "Memuat…" : `Tampilkan ${resultCount} produk`}
+        </Button>
+      </div>
     </div>
   );
   return (
     <main className="catalog-page">
       <div className="page-title">
         <div>
-          <button
-            className="back-link"
-            onClick={reset}
-          >
-            Reset semua filter
-          </button>
-          <h1>Temukan sepatu untuk aktivitasmu</h1>
-          <p aria-live="polite">{loading ? "Memuat hasil…" : error ? "Hasil belum tersedia" : `${products.length} dari ${meta?.total || 0} produk ditampilkan`}</p>
+          <h1>{activeSearch ? `Hasil untuk “${activeSearch}”` : "Temukan sepatu untuk aktivitasmu"}</h1>
+          <p aria-live="polite">
+            {loading ? "Memuat hasil…" : error ? "Hasil belum tersedia" : `${products.length} dari ${resultCount} produk ditampilkan`}
+            {hasFilters && (
+              <>
+                {" · "}
+                <button className="text-link catalog-reset" onClick={reset}>
+                  {activeSearch ? "Hapus pencarian & filter" : "Hapus filter"}
+                </button>
+              </>
+            )}
+          </p>
         </div>
         <div className="catalog-actions">
           <Button
@@ -177,12 +195,14 @@ function Catalog({query, setQuery, openProduct, initialFilter}) {
               <Icon name="search" size={34} />
               <h2>Produk belum ditemukan</h2>
               <p>
-                Coba hapus kata pencarian atau ubah filter brand, aktivitas, harga, dan ukuran.
+                {activeSearch
+                  ? `Tidak ada sepatu yang cocok dengan “${activeSearch}”. Coba kata lain, misalnya nama aktivitas seperti lari atau futsal.`
+                  : "Coba ubah filter brand, aktivitas, harga, atau ukuran."}
               </p>
               <Button
                 onClick={reset}
               >
-                Reset pencarian dan filter
+                Lihat semua sepatu
               </Button>
             </div>
           )}

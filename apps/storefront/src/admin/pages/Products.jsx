@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {api} from "../../api";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 import useAdminResource from "../hooks/useAdminResource";
 import usePagedResource from "../hooks/usePagedResource";
 import {productDraft, serverList, statusLabel, statusOptions, statusTone} from "../lib/helpers";

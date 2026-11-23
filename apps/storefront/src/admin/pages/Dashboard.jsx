@@ -1,5 +1,6 @@
-import React from "react";
-import {rupiah} from "../../data";
+import React, {useEffect, useState} from "react";
+import {api} from "../../api";
+import {rupiah} from "../../lib/currency";
 import useAdminResource from "../hooks/useAdminResource";
 import {loadDashboard} from "../lib/dashboard";
 import {statusLabel, statusTone} from "../lib/helpers";
@@ -12,6 +13,17 @@ import ResourceState from "../components/ResourceState";
 
 function Dashboard({navigate}) {
   const resource = useAdminResource(loadDashboard);
+  // Pengingat: kontak dan identitas toko tampil di footer & halaman kebijakan.
+  const [storeIncomplete, setStoreIncomplete] = useState(false);
+  useEffect(() => {
+    let active = true;
+    api.storeInfo()
+      .then(({data}) => active && setStoreIncomplete(!data?.email || !data?.legal_name))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
   const data = resource.data || {};
   const orders = data.orders || {};
   return (
@@ -20,6 +32,15 @@ function Dashboard({navigate}) {
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
         <>
+          {storeIncomplete && (
+            <div className="adm-feedback adm-overdue-alert" role="status">
+              <span>
+                <strong>Lengkapi informasi toko.</strong> Email layanan pelanggan dan nama badan usaha
+                tampil di footer serta halaman Kontak dan Kebijakan.
+              </span>
+              <button type="button" onClick={() => navigate("settings")}>Buka Pengaturan</button>
+            </div>
+          )}
           {Number(data.operations?.payments_overdue || 0) > 0 && (
             <div className="adm-feedback adm-overdue-alert" role="status">
               <span>

@@ -1,12 +1,11 @@
 import React from "react";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 
 function OrderSummary({
   cart,
   shipping = 0,
   voucher = 0,
   pricing = null,
-  source = "demo",
   totalLabel = "Total",
 }) {
   const localSubtotal = cart.reduce(
@@ -42,9 +41,9 @@ function OrderSummary({
         <strong>{rupiah(total)}</strong>
       </div>
       <small>
-        {source === "api" && pricing
+        {pricing
           ? "Total sudah termasuk ongkir dan diskon yang berlaku."
-          : "Total ini hanya perkiraan dan bukan tagihan."}
+          : "Belum termasuk ongkir. Ongkir dihitung saat checkout."}
       </small>
     </aside>
   );

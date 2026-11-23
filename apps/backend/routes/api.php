@@ -29,6 +29,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
     Route::get('/regions/regencies', [RegionController::class, 'regencies']);
     Route::get('/regions/districts', [RegionController::class, 'districts']);
     Route::get('/regions/villages', [RegionController::class, 'villages']);
+    Route::get('/store-info', fn (App\Domain\Store\StoreInfo $info) => response()->json(['data' => $info->current()]));
     Route::get('/products', [CatalogController::class, 'index']);
     Route::get('/products/{slug}', [CatalogController::class, 'show']);
     Route::post('/payments/midtrans/webhook', [PaymentController::class, 'webhook'])->middleware('throttle:webhooks');
@@ -84,6 +85,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
                 Route::patch('/inventories/{inventory}/adjust', [AdminOperationsController::class, 'adjustInventory']);
                 Route::delete('/inventories/{inventory}', [AdminOperationsController::class, 'deleteInventory']);
                 Route::get('/configurations', [AdminOperationsController::class, 'configurations']);
+                Route::put('/configurations', [AdminOperationsController::class, 'updateConfigurations']);
                 Route::put('/configurations/{key}', [AdminOperationsController::class, 'updateConfiguration']);
                 Route::patch('/orders/{order}/fulfillment', [AdminFulfillmentController::class, 'update']);
                 Route::post('/refunds/{refund}/process', [CancellationRefundController::class, 'refund']);

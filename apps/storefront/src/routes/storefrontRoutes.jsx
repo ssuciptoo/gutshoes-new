@@ -13,6 +13,14 @@ const Profile = lazy(() => import("../pages/account/Profile"));
 const Addresses = lazy(() => import("../pages/account/Addresses"));
 const Orders = lazy(() => import("../pages/account/Orders"));
 const OrderDetail = lazy(() => import("../pages/account/OrderDetail"));
+const StoreInfo = lazy(() => import("../pages/StoreInfo"));
+
+// Halaman informasi toko (kontak & kebijakan) memakai satu komponen.
+const storeInfoRoutes = ["contact", "privacy", "terms", "returns"].map((page) => ({
+  page,
+  path: `/${page}`,
+  render: (c) => <StoreInfo page={page} navigate={c.navigate} />,
+}));
 
 export const storefrontRoutes = [
   {
@@ -65,7 +73,6 @@ export const storefrontRoutes = [
         updateQty={c.updateQty}
         removeItem={c.removeItem}
         navigate={c.navigate}
-        cartSource={c.cartSource}
         cartLoading={c.cartLoading}
         cartError={c.cartError}
         cartActions={c.cartActions}
@@ -84,7 +91,6 @@ export const storefrontRoutes = [
         user={c.user}
         addresses={c.addresses}
         onCheckoutCreated={c.onCheckoutCreated}
-        cartSource={c.cartSource}
         ensureServerCart={c.ensureServerCart}
       />
     ),
@@ -103,6 +109,7 @@ export const storefrontRoutes = [
         navigate={c.navigate}
         onOpenPayment={c.createOrder}
         onRemember={c.rememberGuestOrder}
+        user={c.user}
       />
     ),
   },
@@ -188,6 +195,8 @@ export const storefrontRoutes = [
     ),
   },
 ];
+// Ditaruh di akhir agar route cadangan (indeks 0) tetap Beranda.
+storefrontRoutes.push(...storeInfoRoutes);
 
 export function getStorefrontRoute(page) {
   return (

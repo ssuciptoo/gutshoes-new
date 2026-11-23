@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import {api} from "../api";
-import {rupiah} from "../data";
+import {rupiah} from "../lib/currency";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
 import {formatDeadline, paymentStatusLabel} from "../lib/orderStatus";
@@ -117,7 +117,6 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
       status: result.status,
       paymentStatus: "pending",
       customerType: "guest",
-      source: "api",
     });
     navigate("payment");
   };
@@ -135,8 +134,17 @@ function Tracking({order, navigate, user, onRemember, onOpenPayment}) {
         <p>
           {accessToken
             ? "Pesananmu di perangkat ini sudah dikenali. Status di bawah selalu menampilkan data terbaru."
-            : "Masukkan nomor pesanan dan email yang digunakan saat checkout untuk pencarian manual."}
+            : "Masukkan nomor pesanan dan email yang digunakan saat checkout."}
         </p>
+        {user && user.role !== "ADMIN" && !accessToken && (
+          <p className="tracking-account-hint">
+            Semua pesanan akunmu juga ada di{" "}
+            <button type="button" className="text-link" onClick={() => navigate("orders")}>
+              Riwayat pesanan
+            </button>
+            .
+          </p>
+        )}
         <form ref={formRef} onSubmit={submit} aria-busy={loading}>
           <label>
             Nomor pesanan

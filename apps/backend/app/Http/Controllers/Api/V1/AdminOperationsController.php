@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Domain\Inventory\InventoryService;
+use App\Domain\Store\StoreInfo;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\Inventory;
@@ -21,6 +22,7 @@ use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminOperationsController extends Controller
@@ -241,8 +243,51 @@ class AdminOperationsController extends Controller
         return response()->json(['data' => StoreConfiguration::orderBy('key')->get()]);
     }
 
-    public function updateConfiguration(Request $request, string $key): JsonResponse
+    /**
+     * Simpan banyak pengaturan sekaligus dalam satu transaksi: semua valid lalu tersimpan,
+     * atau tidak ada yang berubah. Kesalahan dilaporkan per kunci (values.<kunci>).
+     */
+    public function updateConfigurations(Request $request, StoreInfo $storeInfo): JsonResponse
     {
+        $request->validate(['values' => ['required', 'array', 'min:1', 'max:50']]);
+        $rules = [];
+        foreach (array_keys($request->input('values')) as $key) {
+            abort_unless(is_string($key) && preg_match('/^[a-z0-9_]{1,64}$/', $key) === 1, 422, 'Kunci pengaturan tidak valid.');
+            $rules["values.{$key}"] = StoreInfo::isField($key) ? array_merge(['present'], StoreInfo::FIELDS[$key]) : ['required'];
+        }
+        $values = $request->validate($rules)['values'];
+
+        $saved = DB::transaction(function () use ($values, $request): array {
+            $saved = [];
+            foreach ($values as $key => $value) {
+                $isStoreField = StoreInfo::isField($key);
+                $value = is_string($value) ? trim($value) : $value;
+                $saved[] = StoreConfiguration::updateOrCreate(['key' => $key], [
+                    'value' => $isStoreField ? ($value ?? '') : $value,
+                    'is_public' => $isStoreField || (bool) StoreConfiguration::where('key', $key)->value('is_public'),
+                    'updated_by' => $request->user()->id,
+                ]);
+            }
+
+            return $saved;
+        });
+        $storeInfo->forget();
+
+        return response()->json(['data' => $saved]);
+    }
+
+    public function updateConfiguration(Request $request, string $key, StoreInfo $storeInfo): JsonResponse
+    {
+        // Informasi toko: aturan per kolom, boleh dikosongkan, dan selalu publik.
+        if (StoreInfo::isField($key)) {
+            $data = $request->validate(['value' => array_merge(['present'], StoreInfo::FIELDS[$key])]);
+            $value = is_string($data['value']) ? trim($data['value']) : $data['value'];
+            $configuration = StoreConfiguration::updateOrCreate(['key' => $key], ['value' => $value ?? '', 'is_public' => true, 'updated_by' => $request->user()->id]);
+            $storeInfo->forget();
+
+            return response()->json(['data' => $configuration]);
+        }
+
         $data = $request->validate(['value' => ['required'], 'is_public' => ['sometimes', 'boolean']]);
         $configuration = StoreConfiguration::updateOrCreate(['key' => $key], ['value' => $data['value'], 'is_public' => $data['is_public'] ?? false, 'updated_by' => $request->user()->id]);
 

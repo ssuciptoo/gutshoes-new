@@ -187,3 +187,47 @@ it('counts only overdue unpaid orders and shipments of paid orders on the dashbo
     $this->actingAs($admin)->getJson("/api/v1/admin/orders/{$overdue->id}")->assertOk()
         ->assertJsonPath('data.refunds', [])->assertJsonStructure(['data' => ['status_histories']]);
 });
+
+it('lets an admin manage public store info with per-field validation and clearable values', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->getJson('/api/v1/store-info')->assertOk()->assertJsonPath('data.email', null)->assertJsonPath('data.version', null);
+
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_email', ['value' => 'bukan-email'])->assertUnprocessable();
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_return_days', ['value' => 400])->assertUnprocessable();
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_email', ['value' => ' halo@gutshoes.test '])->assertOk();
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_copyright', ['value' => '© {tahun} PT GutShoes'])->assertOk();
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_version', ['value' => 'v1.0.0'])->assertOk();
+
+    $this->getJson('/api/v1/store-info')->assertOk()
+        ->assertJsonPath('data.email', 'halo@gutshoes.test')
+        ->assertJsonPath('data.copyright', '© {tahun} PT GutShoes')
+        ->assertJsonPath('data.version', 'v1.0.0');
+    $this->assertDatabaseHas('store_configurations', ['key' => 'store_email', 'is_public' => true]);
+
+    // Mengosongkan kolom menyembunyikannya di toko.
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/store_email', ['value' => null])->assertOk();
+    $this->getJson('/api/v1/store-info')->assertOk()->assertJsonPath('data.email', null);
+});
+
+it('keeps non-store configuration values required', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations/low_stock_threshold', ['value' => null])->assertUnprocessable();
+});
+
+it('saves many configuration values atomically in one request', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+
+    // Satu kolom tidak valid: tidak ada yang tersimpan.
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations', ['values' => [
+        'store_legal_name' => 'PT Uji', 'store_email' => 'salah',
+    ]])->assertUnprocessable()->assertJsonValidationErrors('values.store_email');
+    expect(App\Models\StoreConfiguration::count())->toBe(0);
+
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations', ['values' => [
+        'store_legal_name' => 'PT Uji', 'store_email' => 'cs@uji.test', 'store_version' => null, 'low_stock_threshold' => 4,
+    ]])->assertOk();
+    $this->getJson('/api/v1/store-info')->assertJsonPath('data.legal_name', 'PT Uji')->assertJsonPath('data.version', null);
+    $this->assertDatabaseHas('store_configurations', ['key' => 'low_stock_threshold', 'is_public' => false]);
+
+    $this->actingAs($admin)->putJson('/api/v1/admin/configurations', ['values' => ['bad key!' => 'x']])->assertUnprocessable();
+});

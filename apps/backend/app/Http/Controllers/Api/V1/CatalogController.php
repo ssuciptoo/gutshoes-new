@@ -20,8 +20,14 @@ class CatalogController extends Controller
             'max_price' => ['nullable', 'numeric', $request->filled('min_price') ? 'gte:min_price' : 'min:0'], 'sort' => ['nullable', 'in:newest,price_asc,price_desc,name,best_selling'], 'page' => ['nullable', 'integer', 'min:1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:48']]);
         $query = Product::query()->where('status', 'PUBLISHED')->with(['brand', 'images', 'categories', 'variants.size', 'variants.inventories']);
-        $query->when($data['search'] ?? null, fn (Builder $q, string $term) => $q->where(fn (Builder $inner) => $inner->where('name', 'like', "%{$term}%")
-            ->orWhereHas('brand', fn (Builder $b) => $b->where('name', 'like', "%{$term}%"))->orWhereHas('variants', fn (Builder $v) => $v->where('sku', 'like', "%{$term}%"))));
+        // Pembeli sering mencari aktivitas ("basket", "lari"), jadi kategori ikut dicari. Karakter % dan _ di-escape.
+        $query->when($data['search'] ?? null, function (Builder $q, string $term): void {
+            $like = '%'.addcslashes(trim($term), '%_\\').'%';
+            $q->where(fn (Builder $inner) => $inner->where('name', 'like', $like)
+                ->orWhereHas('brand', fn (Builder $b) => $b->where('name', 'like', $like))
+                ->orWhereHas('categories', fn (Builder $c) => $c->where('name', 'like', $like)->orWhere('slug', 'like', $like))
+                ->orWhereHas('variants', fn (Builder $v) => $v->where('sku', 'like', $like)));
+        });
         $query->when($data['brand'] ?? null, fn (Builder $q, string $slug) => $q->whereHas('brand', fn (Builder $b) => $b->where('slug', $slug)));
         $query->when($data['category'] ?? null, fn (Builder $q, string $slug) => $q->whereHas('categories', fn (Builder $cat) => $cat->where(fn (Builder $match) => $match->where('slug', $slug)->orWhere('name', $slug))));
         $query->when($data['size'] ?? null, fn (Builder $q, string $size) => $q->whereHas('variants', fn (Builder $v) => $v->whereHas('size', fn (Builder $s) => $s->where('value', $size))->whereHas('inventories', fn (Builder $i) => $i->whereColumn('on_hand', '>', 'reserved'))));

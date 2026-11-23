@@ -25,7 +25,7 @@ const LAST_ORDER_KEY = "gutshoes-last-order";
 function readLastOrder() {
   try {
     const saved = JSON.parse(sessionStorage.getItem(LAST_ORDER_KEY) || "null");
-    return saved?.number && saved.source === "api" ? saved : null;
+    return saved?.number ? saved : null;
   } catch {
     return null;
   }
@@ -38,7 +38,7 @@ function withGuestToken(order) {
 }
 function writeLastOrder(order) {
   try {
-    if (order?.number && order.source === "api") {
+    if (order?.number) {
       const safe = {...order};
       delete safe.accessToken;
       delete safe.server;
@@ -56,7 +56,7 @@ export default function App() {
   const [cart, setCart] = useState([]);
   const [order, setOrder] = useState(() =>
     recoveryReference
-      ? {...recoveryReference, source: "api", customerType: "guest"}
+      ? {...recoveryReference, customerType: "guest"}
       : withGuestToken(readLastOrder()),
   );
   const [returnTo, setReturnTo] = useState("profile");
@@ -64,7 +64,6 @@ export default function App() {
   const [guestCartToken, setGuestCartToken] = useState(
     () => sessionStorage.getItem("gutshoes-guest-cart") || "",
   );
-  const [cartSource, setCartSource] = useState("api");
   const [cartLoading, setCartLoading] = useState(false);
   const [cartError, setCartError] = useState("");
   const [cartActions, setCartActions] = useState({});
@@ -183,7 +182,6 @@ export default function App() {
   const applyServerCart = (payload) => {
     const token = payload.guest_token || "";
     setCart(mapServerCart(payload));
-    setCartSource("api");
     setCartError("");
     if (token) {
       setGuestCartToken(token);
@@ -235,7 +233,6 @@ export default function App() {
     const epoch = cartEpoch.current;
     const response = await api.addCartItem(variant.id, 1, guestCartToken);
     if (epoch === cartEpoch.current) applyServerCart(response.data);
-    return "api";
   };
   const updateQty = async (item, delta) => {
     const key = cartKey(item),
@@ -313,7 +310,7 @@ export default function App() {
   const createOrder = (created) => {
     setOrder(created);
     writeLastOrder(created);
-    if (created?.source === "api" && created.number && created.accessToken)
+    if (created?.number && created.accessToken)
       rememberGuestOrder(created);
   };
   const login = () => navigate("login");
@@ -351,7 +348,7 @@ export default function App() {
   const content = renderStorefrontRoute(page, {
     pageData, navigate, openProduct, products, catalogLoading, catalogError, catalogFilters,
     loadCatalog, query, setQuery, addToCart, cart, updateQty, removeItem,
-    cartSource, cartLoading, cartError, cartActions, reloadCart, createOrder,
+    cartLoading, cartError, cartActions, reloadCart, createOrder,
     user, setUser, addresses, setAddresses, guestCartToken, ensureServerCart,
     onCheckoutCreated: () => { setCart([]); setCartActions({}); },
     order, guestOrders, rememberGuestOrder, login, logout, returnTo,

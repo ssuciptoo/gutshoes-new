@@ -1,7 +1,11 @@
 import React from "react";
 import logoGutShoes from "../../assets/logo-gutshoes.webp";
+import {copyrightText, useStoreInfo, whatsappUrl} from "../../lib/storeInfo";
 
 function Footer() {
+  const info = useStoreInfo();
+  const wa = whatsappUrl(info);
+  const copyright = copyrightText(info);
   return (
     <footer>
       <div>
@@ -9,6 +13,12 @@ function Footer() {
         <p>
           Sepatu olahraga dengan informasi harga dan ukuran yang mudah dipahami.
         </p>
+        {(info.email || wa) && (
+          <p className="footer-contact">
+            {info.email && <a href={`mailto:${info.email}`}>{info.email}</a>}
+            {wa && <a href={wa} target="_blank" rel="noreferrer">WhatsApp {info.whatsapp}</a>}
+          </p>
+        )}
       </div>
       <div>
         <strong>Belanja</strong>
@@ -18,15 +28,24 @@ function Footer() {
       </div>
       <div>
         <strong>Bantuan</strong>
-        <a href="#guest-orders">Pesanan terakhir saya</a>
         <a href="#tracking">Lacak pesanan</a>
+        <a href="#returns">Pengembalian & refund</a>
+        <a href="#contact">Hubungi kami</a>
+        <a href="#guest-orders">Pesanan tanpa akun</a>
       </div>
       <div>
-        <strong>Akun</strong>
-        <a href="#orders">Riwayat & pembatalan pesanan</a>
-        <a href="#addresses">Alamat saya</a>
+        <strong>Akun & kebijakan</strong>
+        <a href="#orders">Riwayat pesanan</a>
         <a href="#profile">Profil</a>
+        <a href="#terms">Syarat & ketentuan</a>
+        <a href="#privacy">Kebijakan privasi</a>
       </div>
+      {(copyright || info.version) && (
+        <p className="footer-legal">
+          {copyright && <span>{copyright}</span>}
+          {info.version && <span className="footer-version">Versi {info.version}</span>}
+        </p>
+      )}
     </footer>
   );
 }

@@ -1,11 +1,11 @@
 import React, {useEffect, useState} from "react";
 import {api} from "../api";
-import {rupiah} from "../data";
+import {rupiah} from "../lib/currency";
 import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 
-function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
+function GuestOrders({references, navigate, onOpenPayment, onRemember, user}) {
   const [records, setRecords] = useState(() =>
     references.map((reference) => ({
       ...reference,
@@ -61,7 +61,7 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
         canPay: false,
         error:
           error.status === 404
-            ? "Token pesanan ini tidak lagi valid. Buka tautan pemulihan terbaru dari email."
+            ? "Akses ke pesanan ini sudah berakhir di perangkat ini. Buka tautan di email konfirmasi pesanan."
             : error.message || "Status belum dapat dimuat.",
       };
     }
@@ -74,7 +74,7 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
     setRecords(results);
     if (results.every((record) => record.status === "UNAVAILABLE"))
       setPageError(
-        "Status pesanan belum dapat disinkronkan. Referensi tetap tersimpan agar dapat dicoba lagi.",
+        "Status pesanan belum dapat dimuat. Daftar pesananmu tetap tersimpan, coba muat ulang sebentar lagi.",
       );
     setRefreshing(false);
   };
@@ -117,8 +117,7 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
         paymentStatus: "ready",
         canPay: current.can_pay,
         expiresAt: current.expires_at,
-        source: "api",
-        customerType: "guest",
+          customerType: "guest",
         redirectUrl: response.data.redirect_url,
       };
       onRemember(next);
@@ -139,10 +138,10 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
     <main className="guest-orders-page">
       <div className="guest-orders-head">
         <div>
-          <h1>Pesanan terakhir saya</h1>
+          <h1>Pesanan tanpa akun</h1>
           <p>
-            Pesanan yang kamu buat di perangkat ini tersimpan di sini. Status
-            dan pembayarannya selalu menampilkan data terbaru.
+            Pesanan yang kamu buat tanpa masuk akun di perangkat ini tersimpan
+            di sini, lengkap dengan status terbarunya.
           </p>
         </div>
         {references.length > 0 && (
@@ -151,19 +150,24 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
           </Button>
         )}
       </div>
+      {user && user.role !== "ADMIN" && (
+        <div className="notice info guest-orders-account">
+          <span>Pesanan yang dibuat saat kamu masuk akun ada di Riwayat pesanan.</span>
+          <Button variant="secondary" onClick={() => navigate("orders")}>Buka Riwayat pesanan</Button>
+        </div>
+      )}
       {pageError && <Feedback>{pageError}</Feedback>}
       {!references.length ? (
         <section className="guest-orders-empty">
           <Icon name="package" size={36} />
           <h2>Belum ada pesanan tersimpan</h2>
           <p>
-            Order guest yang berhasil dibuat akan muncul otomatis di perangkat
-            ini. Tautan pemulihan pada email juga dapat menghubungkan kembali
-            pesanan ke browser.
+            Pesanan tanpa akun akan muncul di sini setelah dibuat. Di perangkat
+            lain, buka tautan di email konfirmasi pesanan untuk melihatnya.
           </p>
           <div>
             <Button onClick={() => navigate("tracking")}>
-              Lacak dengan nomor order
+              Lacak dengan nomor pesanan
             </Button>
             <Button variant="secondary" onClick={() => navigate("catalog")}>
               Mulai belanja
@@ -222,8 +226,7 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
                   onClick={() => {
                     onOpenPayment({
                       ...record,
-                      source: "api",
-                      customerType: "guest",
+                                      customerType: "guest",
                     });
                     navigate("tracking");
                   }}
@@ -236,9 +239,9 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember}) {
         </section>
       )}
       <p className="guest-order-privacy">
-        <Icon name="shield" size={17} /> Token pesanan memberi akses ke detail
-        order pada perangkat ini. Hapus data situs jika perangkat akan digunakan
-        orang lain.
+        <Icon name="shield" size={17} /> Siapa pun yang memakai perangkat ini
+        bisa melihat pesanan di halaman ini. Hapus data situs bila perangkat
+        dipakai bersama orang lain.
       </p>
     </main>
   );

@@ -1,5 +1,5 @@
 import React from "react";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 import {orderStatusView, statusLabel, statusTone} from "../lib/helpers";
 import Badge from "./Badge";
 import Icon from "./Icon";

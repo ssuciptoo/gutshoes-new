@@ -5,7 +5,7 @@ import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 import ProductCard from "../components/catalog/ProductCard";
 
-import {useProduct} from "../lib/useCatalog";
+import {useCatalog, useProduct} from "../lib/useCatalog";
 
 function ProductDetail({slug, products, addToCart, navigate}) {
   const {product, loading, error: requestError, retry} = useProduct(slug);
@@ -13,6 +13,11 @@ function ProductDetail({slug, products, addToCart, navigate}) {
   const [size, setSize] = useState(null);
   const [notice, setNotice] = useState("");
   const [activeImage, setActiveImage] = useState(0);
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  // Produk serupa dari aktivitas yang sama; bila kurang, dilengkapi produk terbaru.
+  const categorySlug = product?.categories?.[0]?.slug || "";
+  const {products: sameCategory} = useCatalog({per_page: 5, sort: "best_selling", ...(categorySlug ? {category: categorySlug} : {})});
   const pointerStart = useRef(null);
   useEffect(() => {
     document.title = product ? `${product.name} — GutShoes` : "Detail produk — GutShoes";
@@ -21,6 +26,7 @@ function ProductDetail({slug, products, addToCart, navigate}) {
     setActiveImage(0);
     setSize(null);
     setNotice("");
+    setAdded(false);
   }, [product?.id]);
   if (loading) return <main className="detail-page"><div className="catalog-status" role="status"><span className="catalog-spinner" /><p>Memuat detail produk…</p></div></main>;
   if (error) return <main className="detail-page"><div className="empty" role="alert"><h1>Produk belum dapat dimuat</h1><p>{error}</p><Button onClick={retry}>Coba muat lagi</Button></div></main>;
@@ -36,11 +42,26 @@ function ProductDetail({slug, products, addToCart, navigate}) {
     if (event.key === "ArrowLeft") { event.preventDefault(); showImage(activeImage - 1); }
     if (event.key === "ArrowRight") { event.preventDefault(); showImage(activeImage + 1); }
   };
-  const add = () => {
+  const add = async () => {
     if (!size) { setNotice("Pilih ukuran yang tersedia sebelum menambahkan produk."); return; }
-    addToCart({...product, price: displayPrice}, size);
-    setNotice("Produk ditambahkan ke keranjang.");
+    if (adding) return;
+    setAdding(true);
+    setNotice("");
+    setAdded(false);
+    try {
+      await addToCart({...product, price: displayPrice}, size);
+      setAdded(true);
+    } catch (err) {
+      setNotice(err?.message || "Produk belum dapat ditambahkan. Coba lagi.");
+    } finally {
+      setAdding(false);
+    }
   };
+  const related = [...sameCategory, ...products]
+    .filter((item, index, list) => item.id !== product.id && list.findIndex((other) => other.id === item.id) === index)
+    .slice(0, 4);
+  // Judul mengikuti isi: hanya "serupa" bila memang ada produk lain dari aktivitas yang sama.
+  const hasSimilar = sameCategory.some((item) => item.id !== product.id);
   return (
     <main className="detail-page">
       <button className="back-link" onClick={() => navigate("catalog")}><Icon name="back" /> Kembali ke katalog</button>
@@ -56,13 +77,25 @@ function ProductDetail({slug, products, addToCart, navigate}) {
           {selectedVariant && <p className="variant-meta">SKU {selectedVariant.sku} · {selectedVariant.weight} gram</p>}
           {product.description && <p className="description">{product.description}</p>}
           <div className="size-heading"><strong id="size-picker-label">Pilih ukuran</strong></div>
-          <div className="size-picker" role="group" aria-labelledby="size-picker-label">{product.sizes.map((itemSize) => <button key={itemSize} aria-pressed={size === itemSize} className={size === itemSize ? "active" : ""} disabled={!product.stock[itemSize]} onClick={() => { setSize(itemSize); setNotice(""); }}>{itemSize}<small>{!product.stock[itemSize] ? "Habis" : `${product.stock[itemSize]} stok`}</small></button>)}</div>
-          <Feedback type={notice.includes("ditambahkan") ? "success" : "error"}>{notice}</Feedback>
-          <Button className="add-button" onClick={add}>Tambah ke keranjang <Icon name="cart" /></Button>
-          <div className="product-facts"><div><Icon name="package" /><span><strong>SKU per ukuran</strong>Varian diverifikasi saat checkout</span></div><div><Icon name="truck" /><span><strong>Ongkir otomatis</strong>Dihitung berdasarkan alamat dan berat</span></div></div>
+          <div className="size-picker" role="group" aria-labelledby="size-picker-label">{product.sizes.map((itemSize) => <button key={itemSize} aria-pressed={size === itemSize} className={size === itemSize ? "active" : ""} disabled={!product.stock[itemSize]} onClick={() => { setSize(itemSize); setNotice(""); setAdded(false); }}>{itemSize}<small>{!product.stock[itemSize] ? "Habis" : `${product.stock[itemSize]} stok`}</small></button>)}</div>
+          <Feedback>{notice}</Feedback>
+          {added ? (
+            <div className="added-to-cart" role="status">
+              <p><Icon name="check" /> {product.name} ukuran {size} masuk ke keranjang.</p>
+              <div>
+                <Button onClick={() => navigate("checkout")}>Checkout sekarang</Button>
+                <Button variant="secondary" onClick={() => navigate("cart")}>Lihat keranjang</Button>
+              </div>
+            </div>
+          ) : (
+            <Button className="add-button" onClick={add} disabled={adding} aria-busy={adding}>
+              {adding ? "Menambahkan…" : <>Tambah ke keranjang <Icon name="cart" /></>}
+            </Button>
+          )}
+          <div className="product-facts"><div><Icon name="truck" /><span><strong>Ongkir dihitung otomatis</strong>Pilih kurir dan lihat biayanya sebelum membayar</span></div><div><Icon name="shield" /><span><strong>Pembayaran aman lewat Midtrans</strong>Pilih metode bayar yang tersedia saat checkout</span></div></div>
         </section>
       </div>
-      <section className="section related"><div className="section__heading"><div><h2>Produk lainnya</h2><p>Alternatif dari aktivitas berbeda.</p></div></div><div className="product-grid">{products.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} onOpen={(selected) => navigate("product", {product: selected})} />)}</div></section>
+      <section className="section related"><div className="section__heading"><div><h2>{hasSimilar ? "Produk serupa" : "Produk lainnya"}</h2><p>{hasSimilar ? `Pilihan lain untuk aktivitas ${product.category.toLowerCase()}.` : "Pilihan lain yang mungkin kamu suka."}</p></div></div><div className="product-grid">{related.map((item) => <ProductCard key={item.id} product={item} onOpen={(selected) => navigate("product", {product: selected})} />)}</div></section>
     </main>
   );
 }

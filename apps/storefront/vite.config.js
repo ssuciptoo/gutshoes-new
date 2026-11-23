@@ -37,7 +37,18 @@ export default defineConfig(({command, mode}) => {
         `Set VITE_CLERK_PUBLISHABLE_KEY in .env.${mode} to the Clerk ${mode === "production" ? "live (pk_live_…)" : ""} publishable key.`,
       );
     }
+
+    // Alamat publik toko untuk tag Open Graph dan canonical di index.html.
+    if (!/^https:\/\/[^/]+$/.test((env.VITE_SITE_URL || "").replace(/\/$/, "")) || /example\.com/.test(env.VITE_SITE_URL)) {
+      throw new Error(`Set VITE_SITE_URL in .env.${mode} to the public HTTPS store URL, e.g. https://gutshoes.id.`);
+    }
   }
 
-  return {plugins: [react()]};
+  const siteUrl = (env.VITE_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
+  const siteUrlPlugin = {
+    name: "gutshoes-site-url",
+    transformIndexHtml: (html) => html.replaceAll("__SITE_URL__", siteUrl),
+  };
+
+  return {plugins: [react(), siteUrlPlugin]};
 });

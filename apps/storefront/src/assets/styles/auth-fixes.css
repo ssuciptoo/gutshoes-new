@@ -160,3 +160,47 @@
 /* Ajakan melanjutkan pembayaran di detail pesanan */
 .order-pay-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; margin: 1rem 0; padding: 1rem 1.1rem; border-radius: 12px; background: var(--soft); border-left: 3px solid var(--action-on-soft); }
 .order-pay-banner p { margin: 0; line-height: 1.5; flex: 1 1 260px; }
+
+/* Katalog: tautan hapus filter sebaris dengan jumlah hasil */
+.catalog-reset { font-size: inherit; padding: 0; }
+/* Panel filter di HP: tombol tampilkan hasil menempel di bawah */
+.filters__footer { display: none; }
+@media (max-width: 760px) {
+  .filters__footer { position: sticky; bottom: -1.5rem; margin: 1.5rem -1.5rem -1.5rem; padding: 1rem 1.5rem calc(1rem + env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: var(--white); border-top: 1px solid var(--line); }
+  .filters__footer .button, .filters__footer button:last-child { flex: 1; }
+  .filters__footer .text-link { flex: 0 0 auto; }
+  /* Strip kategori beranda: geser tanpa scrollbar terlihat */
+  .category-strip { scrollbar-width: none; }
+  .category-strip::-webkit-scrollbar { display: none; }
+}
+
+/* Halaman produk: langkah lanjut setelah menambah ke keranjang */
+.added-to-cart { display: grid; gap: .75rem; padding: 1rem; border-radius: 12px; background: var(--soft); border-left: 3px solid var(--action-on-soft); }
+.added-to-cart p { margin: 0; display: flex; align-items: center; gap: .5rem; font-weight: 700; }
+.added-to-cart > div { display: flex; flex-wrap: wrap; gap: .6rem; }
+.added-to-cart > div > * { flex: 1 1 150px; }
+
+/* Footer: kontak & hak cipta */
+.footer-contact { display: flex; flex-direction: column; gap: .35rem; margin: 0; }
+footer > .footer-legal { grid-column: 1 / -1; margin: 0; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,.12); font-size: .78rem; }
+
+/* Halaman informasi toko (kontak & kebijakan) */
+.info-page { max-width: 760px; margin: 0 auto; padding: 2.5rem clamp(1rem, 4vw, 2rem) 4rem; }
+.info-page h1 { font-size: clamp(2rem, 4vw, 2.8rem); letter-spacing: -.03em; margin: 1rem 0 .5rem; }
+.info-intro { color: var(--muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 2rem; }
+.info-body { line-height: 1.7; }
+.info-body h2 { font-size: 1.15rem; margin: 2rem 0 .5rem; }
+.info-body p, .info-body ul { margin: 0 0 1rem; }
+.info-body ul { padding-left: 1.2rem; }
+.info-body li { margin-bottom: .35rem; }
+.info-contact { list-style: none; padding: 0 !important; display: grid; gap: .75rem; margin: 0 0 1.5rem; }
+.info-contact li { display: grid; grid-template-columns: 130px 1fr; gap: 1rem; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: 12px; margin: 0 !important; }
+.info-contact a { color: var(--action-on-soft); font-weight: 700; overflow-wrap: anywhere; }
+.info-updated { color: var(--muted); font-size: .85rem; margin-top: 2rem; }
+.info-help { margin-top: 2.5rem; padding: 1.25rem; border-radius: 14px; background: var(--soft); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; }
+.info-help p { margin: 0; font-weight: 700; }
+@media (max-width: 600px) { .info-contact li { grid-template-columns: 1fr; gap: .2rem; } }
+.guest-orders-account { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+.tracking-account-hint { margin: .5rem 0 0; color: var(--muted); }
+.tracking-account-hint .text-link { padding: 0; font-size: inherit; }
+footer > .footer-legal { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem 1.5rem; }

@@ -1,6 +1,6 @@
 import React, {useState} from "react";
 import {api} from "../api";
-import {rupiah} from "../data";
+import {rupiah} from "../lib/currency";
 import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
@@ -51,29 +51,6 @@ function Payment({order, navigate, user}) {
         <button className="text-link" onClick={() => navigate("cart")}>
           Kembali ke keranjang
         </button>
-      </main>
-    );
-  if (order.source === "demo")
-    return (
-      <main className="status-page">
-        <div className="status-symbol">
-          <Icon name="package" size={34} />
-        </div>
-        <p className="status-label">MODE DEMO</p>
-        <h1>Simulasi checkout selesai</h1>
-        <p>
-          Nomor <strong>{order.number}</strong> hanya contoh. Tidak ada pesanan,
-          tagihan, atau pembayaran yang dibuat.
-        </p>
-        <div className="payment-box">
-          <span>
-            Total simulasi<strong>{rupiah(order.total)}</strong>
-          </span>
-          <span>
-            Status pembayaran<strong>Tidak ada tagihan</strong>
-          </span>
-        </div>
-        <Button onClick={() => navigate("cart")}>Kembali ke keranjang</Button>
       </main>
     );
   const ready = paymentState === "ready" && redirectUrl;

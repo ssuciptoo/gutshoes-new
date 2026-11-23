@@ -1,5 +1,5 @@
 import React from "react";
-import {rupiah} from "../data";
+import {rupiah} from "../lib/currency";
 import {cartKey} from "../lib/cart";
 import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
@@ -11,7 +11,6 @@ function Cart({
   updateQty,
   removeItem,
   navigate,
-  cartSource,
   cartLoading,
   cartError,
   cartActions,
@@ -24,40 +23,27 @@ function Cart({
           <h1>Keranjangmu</h1>
           <p>
             {cart.length
-              ? `${cart.length} varian siap diperiksa`
+              ? `${cart.reduce((sum, item) => sum + item.qty, 0)} barang di keranjang`
               : "Belum ada produk di keranjang"}
           </p>
         </div>
       </div>
-      <div
-        className={`cart-sync-status ${cartSource}`}
-        role="status"
-        aria-live="polite"
-      >
-        <span>
-          <strong>
-            {cartLoading
-              ? "Memuat keranjang…"
-              : cartSource === "api"
-                ? "Keranjang tersimpan"
-                : "Mode demo — keranjang belum tersimpan"}
-          </strong>
-          <small>
-            {cartSource === "api"
-              ? "Isi keranjang tetap tersimpan saat kamu lanjut ke checkout."
-              : "Jumlah dan ongkir hanya simulasi, pesanan tidak akan dibuat."}
-          </small>
-        </span>
-        {cartError && (
-          <Button
-            variant="secondary"
-            onClick={retryCart}
-            disabled={cartLoading}
-          >
-            Coba muat ulang
-          </Button>
-        )}
-      </div>
+      {(cartLoading || cartError) && (
+        <div className="cart-sync-status" role="status" aria-live="polite">
+          <span>
+            <strong>{cartLoading ? "Memuat keranjang…" : "Keranjang belum dapat dimuat"}</strong>
+          </span>
+          {cartError && (
+            <Button
+              variant="secondary"
+              onClick={retryCart}
+              disabled={cartLoading}
+            >
+              Coba muat ulang
+            </Button>
+          )}
+        </div>
+      )}
       {cartError && <Feedback>{cartError}</Feedback>}
       {cart.length ? (
         <div className="cart-layout">
@@ -118,7 +104,7 @@ function Cart({
             })}
           </section>
           <div>
-            <OrderSummary cart={cart} source={cartSource} />
+            <OrderSummary cart={cart} />
             <Button
               className="checkout-button"
               onClick={() => navigate("checkout")}

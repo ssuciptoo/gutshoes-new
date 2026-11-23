@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 import {api} from "../../api";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 import {apiErrorMessage, formatDateTime, orderStatusView, statusLabel, statusTone} from "../lib/helpers";
 import useDialogFocus from "../hooks/useDialogFocus";
 import Badge from "./Badge";

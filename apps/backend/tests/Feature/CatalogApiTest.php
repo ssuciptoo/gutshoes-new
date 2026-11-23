@@ -33,6 +33,16 @@ it('supports catalog search by SKU', function () {
     $this->getJson('/api/v1/products?search=RUN-SEARCH')->assertOk()->assertJsonPath('meta.total', 1);
 });
 
+it('finds products by their activity category and treats wildcards literally', function () {
+    $basket = Product::factory()->create(['name' => 'Elevate High']);
+    $category = App\Models\Category::create(['name' => 'Basket', 'slug' => 'basket']);
+    $basket->categories()->attach($category);
+    Product::factory()->create(['name' => 'Stride Flow']);
+
+    $this->getJson('/api/v1/products?search=basket')->assertOk()->assertJsonPath('meta.total', 1)->assertJsonPath('data.0.name', 'Elevate High');
+    $this->getJson('/api/v1/products?search=%25')->assertOk()->assertJsonPath('meta.total', 0);
+});
+
 it('forbids customer access to admin catalog APIs', function () {
     $this->actingAs(User::factory()->create())->getJson('/api/v1/admin/products')->assertForbidden();
 });

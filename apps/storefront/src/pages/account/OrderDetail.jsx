@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from "react";
 import {api} from "../../api";
-import {rupiah} from "../../data";
+import {rupiah} from "../../lib/currency";
 import AccountShell from "../../components/layout/AccountShell";
 import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";

@@ -12,6 +12,10 @@ const STOREFRONT_PAGES = new Set([
   "addresses",
   "orders",
   "order-detail",
+  "contact",
+  "privacy",
+  "terms",
+  "returns",
 ]);
 
 const ADMIN_SECTIONS = new Set([
@@ -35,8 +39,12 @@ const STOREFRONT_TITLES = {
   cart: "Keranjang belanja",
   checkout: "Checkout",
   payment: "Status pembayaran",
-  "guest-orders": "Pesanan terakhir saya",
+  "guest-orders": "Pesanan tanpa akun",
   tracking: "Lacak pesanan",
+  contact: "Hubungi kami",
+  privacy: "Kebijakan privasi",
+  terms: "Syarat & ketentuan",
+  returns: "Pengembalian & refund",
   login: "Masuk ke akun",
   profile: "Profil saya",
   addresses: "Alamat saya",

@@ -10,11 +10,14 @@ import './assets/styles/theme.css';
 import './assets/styles/motion.css';
 import App from './App';
 import {AuthProvider} from './lib/clerk';
+import {StoreInfoProvider} from './lib/storeInfo';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
-      <App />
+      <StoreInfoProvider>
+        <App />
+      </StoreInfoProvider>
     </AuthProvider>
   </React.StrictMode>,
 );
