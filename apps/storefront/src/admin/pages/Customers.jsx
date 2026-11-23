@@ -1,24 +1,24 @@
 import React, {useState} from "react";
 import {api} from "../../api";
-import {rupiah} from "../../data";
 import usePagedResource from "../hooks/usePagedResource";
-import {statusLabel, statusTone} from "../lib/helpers";
 import Badge from "../components/Badge";
+import CustomerDrawer from "../components/CustomerDrawer";
 import DataToolbar from "../components/DataToolbar";
 import Empty from "../components/Empty";
+import Icon from "../components/Icon";
 import PageHead from "../components/PageHead";
 import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 
+const FILTERS = [
+  ["", "Semua pelanggan"],
+  ["1", "Email terverifikasi"],
+  ["0", "Belum verifikasi"],
+];
+
 function CustomersPage() {
-  const [detail, setDetail] = useState(null);
-  const [detailError, setDetailError] = useState("");
-  const openDetail = async (id) => {
-    setDetailError("");
-    try { setDetail((await api.adminCustomer(id)).data); }
-    catch (error) { setDetailError(error.message || "Detail pelanggan gagal dimuat."); }
-  };
-  const resource = usePagedResource(api.adminCustomers);
+  const [selected, setSelected] = useState(null);
+  const resource = usePagedResource(api.adminCustomers, {filterParam: "verified"});
   const rows = resource.rows;
   return (
     <>
@@ -28,40 +28,54 @@ function CustomersPage() {
         setQuery={resource.setQuery}
         filter={resource.filter}
         setFilter={resource.setFilter}
-        options={[["", "Semua pelanggan"]]}
+        options={FILTERS}
         placeholder="Cari nama atau email…"
         searchLabel="Cari pelanggan"
+        filterLabel="Filter verifikasi email"
       />
       <ResourceState {...resource} />
-      {detailError && <div className="adm-feedback error" role="alert">{detailError}</div>}
       {!resource.loading && !resource.error && (
         <section className="adm-card adm-table-card">
           {rows.length ? (
             <div className="adm-table-wrap">
-              <table className="adm-responsive-table">
+              <table className="adm-responsive-table adm-card-table">
                 <thead>
                   <tr>
                     <th>Pelanggan</th>
-                    <th>Verifikasi email</th>
+                    <th>Email</th>
                     <th>Bergabung</th>
-                    <th>Status</th>
+                    <th className="num">Pesanan</th>
+                    <th>
+                      <span className="sr-only">Aksi</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((item) => (
-                    <tr key={item.id} onClick={() => openDetail(item.id)} tabIndex="0">
+                    <tr key={item.id}>
                       <td data-label="Pelanggan">
                         <strong>{item.name || "Pelanggan"}</strong>
                         <small>{item.email}</small>
                       </td>
-                      <td data-label="Verifikasi email">
-                        {item.email_verified_at ? "Terverifikasi" : "Belum"}
+                      <td data-label="Email">
+                        <Badge tone={item.email_verified_at ? "success" : "warning"}>
+                          {item.email_verified_at ? "Terverifikasi" : "Belum verifikasi"}
+                        </Badge>
                       </td>
                       <td data-label="Bergabung">
                         {new Date(item.created_at).toLocaleDateString("id-ID")}
                       </td>
-                      <td data-label="Status">
-                        <Badge tone="success">Aktif</Badge>
+                      <td data-label="Pesanan" className="num">
+                        {Number(item.orders_count || 0)}
+                      </td>
+                      <td data-label="Aksi">
+                        <button
+                          className="adm-row-action"
+                          onClick={() => setSelected(item.id)}
+                          aria-label={`Lihat detail ${item.name || item.email}`}
+                        >
+                          <Icon name="arrow" />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -69,22 +83,15 @@ function CustomersPage() {
               </table>
             </div>
           ) : (
-            <Empty text={resource.query ? "Pelanggan tidak ditemukan." : "Belum ada pelanggan tersimpan."} />
+            <Empty
+              title="Pelanggan tidak ditemukan"
+              text={resource.query || resource.filter ? "Coba ubah pencarian atau filter." : "Belum ada pelanggan tersimpan."}
+            />
           )}
           <Pagination meta={resource.meta} page={resource.page} setPage={resource.setPage} unit="pelanggan" />
         </section>
       )}
-      {detail && (
-        <div className="adm-overlay" onClick={() => setDetail(null)}>
-          <aside className="adm-drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <header><div><small>PELANGGAN</small><h2>{detail.customer?.name || "Pelanggan"}</h2></div><button onClick={() => setDetail(null)}>x</button></header>
-            <section><h3>Kontak</h3><p>{detail.customer?.email}<br />{detail.customer?.customer_profile?.phone || "Telepon belum tersedia"}</p></section>
-            <section><h3>Ringkasan</h3><div className="adm-line-item"><span>Jumlah pesanan<small>{detail.summary?.order_count || 0}</small></span><strong>{rupiah(Number(detail.summary?.paid_total || 0))}</strong></div></section>
-            <section><h3>Alamat</h3>{detail.customer?.addresses?.length ? detail.customer.addresses.map((address) => <p key={address.id}>{address.label}: {address.address_line}, {address.district}, {address.city} {address.postal_code}</p>) : <p>Belum ada alamat.</p>}</section>
-            <section><h3>Pesanan terakhir</h3>{detail.orders?.length ? detail.orders.map((order) => <div className="adm-line-item" key={order.id}><span>{order.order_number}<small><Badge tone={statusTone(order.status)}>{statusLabel(order.status)}</Badge></small></span><strong>{rupiah(Number(order.grand_total || 0))}</strong></div>) : <p>Belum ada pesanan.</p>}</section>
-          </aside>
-        </div>
-      )}
+      {selected && <CustomerDrawer customerId={selected} onClose={() => setSelected(null)} />}
     </>
   );
 }

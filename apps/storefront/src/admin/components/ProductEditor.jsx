@@ -23,6 +23,7 @@ function ProductEditor({
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmImage, setConfirmImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
@@ -276,6 +277,7 @@ function ProductEditor({
         images: previous.images.filter((item) => item.id !== image.id),
       }));
       setNotice("Gambar produk dihapus.");
+      setConfirmImage(null);
     } catch (err) {
       setError(apiErrorMessage(err, "Gambar belum dapat dihapus."));
     } finally {
@@ -555,13 +557,31 @@ function ProductEditor({
                         <small>{image.path}</small>
                       </span>
                       {image.is_primary && <Badge tone="success">Utama</Badge>}
-                      <button
-                        type="button"
-                        onClick={() => deleteImage(image)}
-                        disabled={uploading}
-                      >
-                        Hapus
-                      </button>
+                      {confirmImage === image.id ? (
+                        <span className="adm-image-confirm">
+                          <button type="button" onClick={() => setConfirmImage(null)} disabled={uploading}>
+                            Batal
+                          </button>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() => deleteImage(image)}
+                            disabled={uploading}
+                            aria-label={`Ya, hapus gambar ${image.alt_text || form.name}`}
+                          >
+                            {uploading ? "Menghapus…" : "Ya, hapus"}
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmImage(image.id)}
+                          disabled={uploading}
+                          aria-label={`Hapus gambar ${image.alt_text || form.name}`}
+                        >
+                          Hapus
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>

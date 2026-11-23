@@ -41,6 +41,7 @@ export const serverMeta = (response) => {
     page: Number(source.current_page || 1),
     lastPage: Number(source.last_page || 1),
     total: Number(source.total ?? serverList(response?.data).length),
+    raw: response?.meta || {},
   };
 };
 export function productDraft(product) {

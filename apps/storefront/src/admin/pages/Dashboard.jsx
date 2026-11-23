@@ -1,7 +1,9 @@
 import React from "react";
-import {api} from "../../api";
 import {rupiah} from "../../data";
 import useAdminResource from "../hooks/useAdminResource";
+import {loadDashboard} from "../lib/dashboard";
+import {statusLabel, statusTone} from "../lib/helpers";
+import Badge from "../components/Badge";
 
 import Metric from "../components/Metric";
 import Icon from "../components/Icon";
@@ -9,7 +11,7 @@ import PageHead from "../components/PageHead";
 import ResourceState from "../components/ResourceState";
 
 function Dashboard({navigate}) {
-  const resource = useAdminResource(api.dashboard);
+  const resource = useAdminResource(loadDashboard);
   const data = resource.data || {};
   const orders = data.orders || {};
   return (
@@ -27,9 +29,9 @@ function Dashboard({navigate}) {
             </div>
             <div className="adm-metrics">
               <Metric
-                label="Pendapatan terbayar"
-                value={rupiah(Number(data.revenue?.paid_total || 0))}
-                delta="Akumulasi pesanan terkonfirmasi"
+                label="Pendapatan 30 hari"
+                value={rupiah(Number(data.revenue?.last_30_days || 0))}
+                delta={"Sepanjang waktu " + rupiah(Number(data.revenue?.paid_total || 0))}
               />
               <Metric
                 label="Pesanan hari ini"
@@ -129,6 +131,36 @@ function Dashboard({navigate}) {
                 <b>{data.operations.refunds_pending}</b>
                 <Icon name="arrow" />
               </button>
+            )}
+          </section>
+          <section className="adm-card adm-recent-orders" aria-labelledby="recent-orders-title">
+            <div className="adm-card-head">
+              <div>
+                <h2 id="recent-orders-title">Pesanan terbaru</h2>
+                <p>Lima pesanan terakhir yang masuk.</p>
+              </div>
+              <button onClick={() => navigate("orders")}>
+                Lihat semua <Icon name="arrow" />
+              </button>
+            </div>
+            {data.recent_orders?.length ? (
+              <ul>
+                {data.recent_orders.map((order) => (
+                  <li key={order.id}>
+                    <span>
+                      <strong>{order.order_number}</strong>
+                      <small>
+                        {order.customer_name || order.customer_email || "Guest"} ·{" "}
+                        {new Date(order.created_at).toLocaleString("id-ID", {dateStyle: "medium", timeStyle: "short"})}
+                      </small>
+                    </span>
+                    <Badge tone={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
+                    <b>{rupiah(Number(order.grand_total || 0))}</b>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="adm-muted-copy adm-recent-empty">Belum ada pesanan.</p>
             )}
           </section>
         </>

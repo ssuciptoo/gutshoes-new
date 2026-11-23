@@ -3,6 +3,7 @@ import {api} from "./api";
 import {forgetAdminSession} from "./lib/adminSession";
 import logoGutShoes from "./assets/logo-gutshoes.webp";
 import {navGroups, titles} from "./admin/config";
+import {loadDashboard} from "./admin/lib/dashboard";
 import Icon from "./admin/components/Icon";
 import {getAdminRoute} from "./routes";
 
@@ -13,15 +14,41 @@ export default function AdminPanel({
 }) {
   const [rail, setRail] = useState(false);
   const [orderCount, setOrderCount] = useState(null);
+  const [admin, setAdmin] = useState(null);
   const navRef = useRef(null);
   const activeRoute = getAdminRoute(section);
   const valid = activeRoute.section;
   const content = activeRoute.render({navigate});
+  // Menu samping (HP/tablet): tutup dengan Esc dan setiap kali halaman berganti.
+  useEffect(() => {
+    setRail(false);
+  }, [valid]);
+  useEffect(() => {
+    if (!rail) return undefined;
+    const onKey = (event) => {
+      if (event.key === "Escape") setRail(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [rail]);
+  useEffect(() => {
+    let active = true;
+    api.me().then(({data}) => active && setAdmin(data)).catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+  const initials =
+    (admin?.name || "Admin")
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word) => word[0].toUpperCase())
+      .join("") || "AD";
   useEffect(() => {
     let active = true;
     const loadOrderCount = () =>
-      api
-        .dashboard()
+      loadDashboard()
         .then(({data}) => {
           if (!active) return;
           const orders = data?.orders || {};
@@ -105,10 +132,10 @@ export default function AdminPanel({
             <span>Lihat storefront</span>
           </button>
           <div className="adm-admin">
-            <span>AD</span>
+            <span aria-hidden="true">{initials}</span>
             <div>
-              <strong>Administrator</strong>
-              <small>Sesi aktif</small>
+              <strong>{admin?.name || "Administrator"}</strong>
+              <small>{admin?.email || "Sesi aktif"}</small>
             </div>
             <button
               className="adm-logout"

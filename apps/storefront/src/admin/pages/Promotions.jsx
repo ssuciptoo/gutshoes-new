@@ -81,7 +81,7 @@ function PromotionsPage() {
         <section className="adm-card adm-table-card">
           {resource.rows.length ? (
             <div className="adm-table-wrap">
-              <table className="adm-responsive-table">
+              <table className="adm-responsive-table adm-card-table">
                 <thead>
                   <tr>
                     <th>{isVoucher ? "Kode / nama" : "Nama"}</th>

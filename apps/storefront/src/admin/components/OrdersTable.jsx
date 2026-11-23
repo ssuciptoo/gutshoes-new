@@ -7,7 +7,7 @@ import Icon from "./Icon";
 function OrdersTable({rows, onOpen}) {
   return (
     <div className="adm-table-wrap">
-      <table className="adm-responsive-table">
+      <table className="adm-responsive-table adm-card-table">
         <thead>
           <tr>
             <th>Pesanan</th>
@@ -26,10 +26,6 @@ function OrdersTable({rows, onOpen}) {
               <td data-label="Pesanan">
                 <strong>{o.id}</strong>
                 <small>{o.time}</small>
-                <span className="adm-mobile-summary">
-                  <Badge tone={statusTone(o.status)}>{statusLabel(o.status)}</Badge>
-                  <b>{rupiah(o.total)}</b>
-                </span>
               </td>
               <td data-label="Pelanggan">{o.customer}</td>
               <td data-label="Pembayaran">

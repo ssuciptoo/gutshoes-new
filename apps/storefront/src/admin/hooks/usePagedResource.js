@@ -3,7 +3,7 @@ import {serverList, serverMeta} from "../lib/helpers";
 
 // Listing admin dengan pencarian, filter, dan halaman di sisi server.
 // loader menerima params ({page, per_page, search, ...}) dan mengembalikan respons API.
-function usePagedResource(loader, {perPage = 25, filterParam = "status"} = {}) {
+function usePagedResource(loader, {perPage = 25, filterParam = "status", extraParams = {}} = {}) {
   const [query, setQueryState] = useState("");
   const [search, setSearch] = useState("");
   const [filter, setFilterState] = useState("");
@@ -16,6 +16,8 @@ function usePagedResource(loader, {perPage = 25, filterParam = "status"} = {}) {
     meta: {page: 1, lastPage: 1, total: 0},
     loaded: false,
   });
+  // Filter tambahan (mis. rentang tanggal); kunci string agar efek hanya jalan saat isinya berubah.
+  const extraKey = JSON.stringify(extraParams);
   const loaderRef = useRef(loader);
   loaderRef.current = loader;
 
@@ -34,6 +36,9 @@ function usePagedResource(loader, {perPage = 25, filterParam = "status"} = {}) {
     const params = {page, per_page: perPage};
     if (search) params.search = search;
     if (filter) params[filterParam] = filter;
+    Object.entries(JSON.parse(extraKey)).forEach(([key, value]) => {
+      if (value) params[key] = value;
+    });
     loaderRef.current(params)
       .then((response) => {
         if (!active) return;
@@ -55,7 +60,12 @@ function usePagedResource(loader, {perPage = 25, filterParam = "status"} = {}) {
     return () => {
       active = false;
     };
-  }, [page, search, filter, attempt, perPage, filterParam]);
+  }, [page, search, filter, attempt, perPage, filterParam, extraKey]);
+
+  // Filter tambahan berubah → kembali ke halaman pertama.
+  useEffect(() => {
+    setPage(1);
+  }, [extraKey]);
 
   return {
     ...state,

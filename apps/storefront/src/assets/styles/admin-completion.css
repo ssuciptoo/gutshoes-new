@@ -529,5 +529,125 @@
 .adm-chip button:hover{background:#cdebf4}
 @media(max-width:620px){.adm-pagination{flex-direction:column;align-items:stretch}.adm-pagination>div{width:100%}.adm-pagination button{flex:1}.adm-refund-action{white-space:normal}}
 @media(max-width:900px){.adm-tabs{overflow-y:hidden;scrollbar-width:none}.adm-tabs::-webkit-scrollbar{display:none}.adm-tabs button.active:after{bottom:0}}
-.adm-mobile-summary{display:none}
-@media(max-width:620px){.adm-mobile-summary{display:flex;align-items:center;gap:8px;margin-top:6px}.adm-mobile-summary b{font-size:.74rem;color:#24343d}}
+.adm-recent-orders{margin-top:18px}
+.adm-recent-orders ul{list-style:none;margin:0;padding:0}
+.adm-recent-orders li{display:grid;grid-template-columns:minmax(0,1fr) auto 120px;gap:14px;align-items:center;padding:12px 19px;border-bottom:1px solid var(--adm-line);font-size:.78rem}
+.adm-recent-orders li:last-child{border-bottom:0}
+.adm-recent-orders li>span{display:flex;flex-direction:column;min-width:0}
+.adm-recent-orders li small{color:var(--adm-subtle);font-size:.68rem;margin-top:3px;overflow-wrap:anywhere}
+.adm-recent-orders li>b{text-align:right;font-variant-numeric:tabular-nums}
+.adm-recent-empty{padding:18px 19px}
+@media(max-width:620px){.adm-recent-orders li{grid-template-columns:minmax(0,1fr) auto}.adm-recent-orders li>b{grid-column:1/-1;text-align:left}}
+.adm-date-range{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin:-4px 0 14px}
+.adm-date-range label{display:flex;flex-direction:column;gap:5px;font-size:.7rem;font-weight:750;color:var(--adm-muted)}
+.adm-date-range input{height:40px;padding:0 10px;border:1px solid #d4dde1;border-radius:8px;background:#fff;font-size:.78rem}
+@media(max-width:620px){.adm-date-range label{flex:1;min-width:130px}}
+.adm-field-help{color:var(--adm-muted);font-weight:500;font-size:.68rem;line-height:1.5}
+.adm-sticky-save .adm-save-error{color:var(--adm-danger)}
+.adm-sticky-save .adm-save-success{color:var(--adm-success)}
+.adm-settings+.adm-settings,.adm-settings+.adm-resource-state{margin-top:18px}
+/* Login admin di HP: form langsung terlihat tanpa scroll */
+@media(max-width:760px){.admin-login>section{min-height:0!important;padding:16px!important}.admin-login>section>div{display:none}.admin-login form{padding-top:1.5rem!important}.admin-login form img{margin-bottom:1rem!important}}
+.adm-image-confirm{display:inline-flex;gap:4px}
+.adm-image-list .adm-image-confirm button{min-height:36px;padding:0 10px;border-radius:7px}
+.adm-image-list .adm-image-confirm button:first-child{color:#24343d;background:#f1f4f5}
+.adm-image-list .adm-image-confirm button.danger{color:#fff;background:var(--adm-danger)}
+.adm-admin div{min-width:0;flex:1}.adm-admin strong,.adm-admin small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+/* Dua form di halaman Pengaturan: tombol simpan menempel di form masing-masing, tidak di layar */
+.adm-settings .adm-sticky-save{position:static;box-shadow:none}
+
+/* Tabel → kartu di layar HP: semua info utama terlihat tanpa geser horizontal. */
+@media(max-width:620px){
+  .admin-app .adm-table-wrap:has(.adm-card-table){max-height:none;overflow:visible}
+  .admin-app .adm-table-wrap .adm-card-table{display:block;min-width:0!important;width:100%}
+  .admin-app .adm-card-table thead{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .admin-app .adm-card-table tbody{display:block}
+  .admin-app .adm-card-table tbody tr{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;padding:14px 16px;border-bottom:1px solid var(--adm-line)}
+  .admin-app .adm-card-table tbody tr:last-child{border-bottom:0}
+  .admin-app .adm-card-table td{position:static!important;display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0!important;max-width:none!important;width:auto!important;height:auto;padding:0;border:0;background:transparent!important;box-shadow:none!important;white-space:normal;text-align:left!important;font-size:.82rem}
+  .admin-app .adm-card-table td[data-label]::before{content:attr(data-label)!important;display:block!important;color:var(--adm-muted);font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  /* Kolom pertama = judul kartu */
+  .admin-app .adm-card-table td:first-child{grid-column:1/-1;padding-right:52px}
+  .admin-app .adm-card-table td:first-child::before{display:none!important}
+  .admin-app .adm-card-table td:first-child strong,.admin-app .adm-card-table td:first-child small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  .admin-app .adm-card-table td:first-child strong{font-size:.9rem}
+  /* Tombol buka di pojok kanan atas */
+  .admin-app .adm-card-table td[data-label="Aksi"]{position:absolute!important;top:8px;right:6px}
+  .admin-app .adm-card-table td[data-label="Aksi"]::before{display:none!important}
+  /* Tindakan refund butuh lebar penuh */
+  .admin-app .adm-card-table td[data-label="Tindakan"]{grid-column:1/-1}
+  .admin-app .adm-card-table td[data-label="Tindakan"] .adm-button{width:100%}
+  .admin-app .adm-card-table .adm-refund-confirm{display:flex;width:100%}
+  .admin-app .adm-card-table .adm-refund-confirm .adm-button{flex:1}
+  .admin-app .adm-card-table code{white-space:normal;overflow-wrap:anywhere}
+  .admin-app .adm-card-table tbody tr:hover{background:transparent}
+}
+
+/* Perbaikan kecil responsive */
+@media(max-width:900px){
+  .admin-app .adm-sidebar nav button b{position:static;transform:none;margin-left:auto;min-width:22px;height:22px}
+}
+@media(max-width:720px){
+  .admin-app .adm-simple-row>.adm-badge{justify-self:start}
+}
+@media(max-width:420px){
+  .admin-app .adm-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .admin-app .adm-metric{min-height:0;padding:14px}
+  .admin-app .adm-metric strong{font-size:1.2rem}
+}
+@media(max-width:340px){
+  .admin-app .adm-metrics{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:620px){
+  .admin-app .adm-inventory-table.adm-card-table tbody tr{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .admin-app .adm-inventory-table.adm-card-table td{order:3}
+  .admin-app .adm-inventory-table.adm-card-table td:first-child{order:0}
+  .admin-app .adm-inventory-table.adm-card-table td[data-label="Status"]{order:1;grid-column:1/-1;margin-top:-4px}
+  .admin-app .adm-inventory-table.adm-card-table td[data-label="Status"]::before{display:none!important}
+  .admin-app .adm-inventory-table.adm-card-table td[data-label="SKU"],.admin-app .adm-inventory-table.adm-card-table td[data-label="Gudang"]{order:2;grid-column:span 2}
+  .admin-app .adm-inventory-table.adm-card-table td[data-label="Aksi"]{order:4}
+}
+/* Baris grid di area scroll editor stok tidak boleh menyusut (ringkasan stok sempat gepeng 1px). */
+.adm-inventory-form-body{grid-auto-rows:max-content}
+@media(max-width:620px){
+  .admin-app .adm-inventory-editor form>footer{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px}
+  .admin-app .adm-inventory-editor form>footer .adm-button{flex:1 1 0;width:auto}
+  .admin-app .adm-inventory-editor form>footer .adm-delete-link{flex-basis:100%;text-align:left}
+}
+
+/* Tabel stok punya banyak kolom: tampil sebagai kartu sampai tablet. */
+@media(max-width:900px){
+  .admin-app .adm-table-wrap:has(.adm-card-table--wide){max-height:none;overflow:visible}
+  .admin-app .adm-table-wrap .adm-card-table--wide{display:block;min-width:0!important;width:100%}
+  .admin-app .adm-card-table--wide thead{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .admin-app .adm-card-table--wide tbody{display:block}
+  .admin-app .adm-card-table--wide tbody tr{position:relative;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;padding:14px 16px;border-bottom:1px solid var(--adm-line)}
+  .admin-app .adm-card-table--wide tbody tr:last-child{border-bottom:0}
+  .admin-app .adm-card-table--wide td{position:static!important;display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0!important;max-width:none!important;width:auto!important;height:auto;padding:0;border:0;background:transparent!important;box-shadow:none!important;white-space:normal;text-align:left!important;font-size:.82rem}
+  .admin-app .adm-card-table--wide td[data-label]::before{content:attr(data-label)!important;display:block!important;color:var(--adm-muted);font-size:.64rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase}
+  /* Kolom pertama = judul kartu */
+  .admin-app .adm-card-table--wide td:first-child{grid-column:1/-1;padding-right:52px}
+  .admin-app .adm-card-table--wide td:first-child::before{display:none!important}
+  .admin-app .adm-card-table--wide td:first-child strong,.admin-app .adm-card-table--wide td:first-child small{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+  .admin-app .adm-card-table--wide td:first-child strong{font-size:.9rem}
+  /* Tombol buka di pojok kanan atas */
+  .admin-app .adm-card-table--wide td[data-label="Aksi"]{position:absolute!important;top:8px;right:6px}
+  .admin-app .adm-card-table--wide td[data-label="Aksi"]::before{display:none!important}
+  /* Tindakan refund butuh lebar penuh */
+  .admin-app .adm-card-table--wide td[data-label="Tindakan"]{grid-column:1/-1}
+  .admin-app .adm-card-table--wide td[data-label="Tindakan"] .adm-button{width:100%}
+  .admin-app .adm-card-table--wide .adm-refund-confirm{display:flex;width:100%}
+  .admin-app .adm-card-table--wide .adm-refund-confirm .adm-button{flex:1}
+  .admin-app .adm-card-table--wide code{white-space:normal;overflow-wrap:anywhere}
+  .admin-app .adm-card-table--wide tbody tr:hover{background:transparent}
+  .admin-app .adm-inventory-table.adm-card-table--wide tbody tr{grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .admin-app .adm-inventory-table.adm-card-table--wide td{order:3}
+  .admin-app .adm-inventory-table.adm-card-table--wide td:first-child{order:0}
+  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Status"]{order:1;grid-column:1/-1;margin-top:-4px}
+  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Status"]::before{display:none!important}
+  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="SKU"],.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Gudang"]{order:2;grid-column:span 2}
+  .admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Aksi"]{order:4
+}
+@media(min-width:621px) and (max-width:900px){.admin-app .adm-inventory-table.adm-card-table--wide tbody tr{grid-template-columns:2fr 2fr 1fr 1fr 1fr 1fr}.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="SKU"],.admin-app .adm-inventory-table.adm-card-table--wide td[data-label="Gudang"]{grid-column:span 1}}
+.adm-table-wrap code{white-space:nowrap}
+@media(min-width:721px) and (max-width:900px){.admin-app .adm-table-wrap .adm-responsive-table{min-width:0}.admin-app .adm-table-wrap .adm-responsive-table th,.admin-app .adm-table-wrap .adm-responsive-table td{padding-inline:10px}}

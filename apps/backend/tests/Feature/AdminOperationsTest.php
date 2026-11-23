@@ -133,3 +133,31 @@ it('stores voucher periods sent as ISO timestamps and returns them as ISO', func
     expect($response->json('data.starts_at'))->toStartWith('2026-11-23T03:00:00');
     $this->actingAs($admin)->getJson('/api/v1/admin/vouchers?search=hemat')->assertOk()->assertJsonCount(1, 'data');
 });
+
+it('records the target of admin mutations and lists audit logs with admin name and date range', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN, 'name' => 'Rina Admin']);
+    $inventory = Inventory::factory()->create(['on_hand' => 5, 'reserved' => 0]);
+    $this->actingAs($admin)->patchJson("/api/v1/admin/inventories/{$inventory->id}/adjust", ['delta' => 1, 'reason' => 'Opname'])->assertOk();
+    $this->assertDatabaseHas('audit_logs', ['admin_id' => $admin->id, 'action' => 'patch', 'entity_type' => 'inventories', 'entity_id' => $inventory->id]);
+
+    $this->actingAs($admin)->getJson('/api/v1/admin/audit-logs?action=patch')->assertOk()
+        ->assertJsonPath('data.0.admin.name', 'Rina Admin');
+    $this->actingAs($admin)->getJson('/api/v1/admin/audit-logs?from='.now()->addDay()->toDateString())->assertOk()->assertJsonCount(0, 'data');
+    $this->actingAs($admin)->getJson('/api/v1/admin/audit-logs?to='.now()->toDateString())->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('filters customers by email verification and returns their order count', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    User::factory()->create(['role' => UserRole::CUSTOMER, 'email_verified_at' => now()]);
+    User::factory()->create(['role' => UserRole::CUSTOMER, 'email_verified_at' => null]);
+    $this->actingAs($admin)->getJson('/api/v1/admin/customers?verified=0')->assertOk()
+        ->assertJsonCount(1, 'data')->assertJsonPath('data.0.email_verified_at', null)->assertJsonPath('data.0.orders_count', 0);
+    $this->actingAs($admin)->getJson('/api/v1/admin/customers?verified=1')->assertOk()->assertJsonCount(1, 'data');
+});
+
+it('includes recent orders and 30 day revenue on the dashboard and the stock threshold on inventory listings', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->actingAs($admin)->getJson('/api/v1/admin/dashboard')->assertOk()
+        ->assertJsonPath('data.revenue.last_30_days', '0.00')->assertJsonPath('data.recent_orders', []);
+    $this->actingAs($admin)->getJson('/api/v1/admin/inventories')->assertOk()->assertJsonPath('meta.low_stock_threshold', 5);
+});

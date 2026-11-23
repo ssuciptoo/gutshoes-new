@@ -41,13 +41,16 @@ class AdminOperationsController extends Controller
             'revenue' => [
                 'paid_total' => number_format((float) Order::whereIn('status', ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'])->sum('grand_total'), 2, '.', ''),
                 'today' => number_format((float) Order::whereDate('created_at', today())->whereIn('status', ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'])->sum('grand_total'), 2, '.', ''),
+                'last_30_days' => number_format((float) Order::where('created_at', '>=', now()->subDays(30))->whereIn('status', ['PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED'])->sum('grand_total'), 2, '.', ''),
                 'currency' => 'IDR',
             ],
             'operations' => [
                 'payments_pending' => Payment::where('status', 'PENDING')->count(),
                 'shipments_pending' => Shipment::whereIn('status', ['PENDING', 'READY_TO_SHIP'])->count(),
-                'refunds_pending' => Refund::whereIn('status', ['REQUESTED', 'PENDING', 'PROCESSING'])->count(),
+                'refunds_pending' => Refund::whereIn('status', ['PENDING', 'FAILED'])->count(),
             ],
+            'recent_orders' => Order::query()->with('payment:id,order_id,status')->latest()->limit(5)
+                ->get(['id', 'order_number', 'customer_name', 'customer_email', 'status', 'grand_total', 'created_at']),
             'low_stock_count' => Inventory::whereRaw('(on_hand - reserved) <= ?', [$lowStock])->count(), 'low_stock_threshold' => $lowStock,
         ]]);
     }
@@ -90,7 +93,14 @@ class AdminOperationsController extends Controller
 
     public function customers(Request $request): JsonResponse
     {
-        return $this->listing(User::query()->where('role', 'CUSTOMER'), $request, ['email'], 'created_at', ['name', 'email']);
+        $query = User::query()->where('role', 'CUSTOMER')->withCount('orders');
+        match ($request->input('verified')) {
+            '1' => $query->whereNotNull('email_verified_at'),
+            '0' => $query->whereNull('email_verified_at'),
+            default => null,
+        };
+
+        return $this->listing($query, $request, ['email'], 'created_at', ['name', 'email']);
     }
 
     public function customer(User $customer): JsonResponse
@@ -129,7 +139,12 @@ class AdminOperationsController extends Controller
 
     public function auditLogs(Request $request): JsonResponse
     {
-        return $this->listing(AuditLog::query(), $request, ['admin_id', 'action', 'entity_type'], 'created_at', ['action', 'entity_type', 'description']);
+        $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
+        $query = AuditLog::query()->with('admin:id,name,email');
+        $query->when($request->input('from'), fn (Builder $q, $from) => $q->where('created_at', '>=', \Illuminate\Support\Carbon::parse($from)->startOfDay()));
+        $query->when($request->input('to'), fn (Builder $q, $to) => $q->where('created_at', '<=', \Illuminate\Support\Carbon::parse($to)->endOfDay()));
+
+        return $this->listing($query, $request, ['admin_id', 'action', 'entity_type'], 'created_at', ['action', 'entity_type', 'description']);
     }
 
     public function promotions(Request $request): JsonResponse
@@ -159,7 +174,11 @@ class AdminOperationsController extends Controller
             default => null,
         };
 
-        return $this->listing($query, $request, ['warehouse_id', 'product_variant_id'], 'updated_at');
+        $response = $this->listing($query, $request, ['warehouse_id', 'product_variant_id'], 'updated_at');
+        $payload = $response->getData(true);
+        $payload['meta']['low_stock_threshold'] = $threshold;
+
+        return $response->setData($payload);
     }
 
     public function inventoryOptions(): JsonResponse

@@ -11,6 +11,22 @@ import PageHead from "../components/PageHead";
 import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 
+const MOVEMENT_TYPES = {
+  ADD: "Stok masuk",
+  ADJUST: "Penyesuaian",
+  RESERVE: "Dipesan",
+  RELEASE: "Pesanan batal / kedaluwarsa",
+  SELL: "Terjual",
+  RETURN: "Dikembalikan",
+};
+// Alasan yang ditulis sistem (bukan admin) diterjemahkan.
+const SYSTEM_REASONS = {
+  "Stock reserved": "Dicadangkan untuk pesanan",
+  "Reservation released": "Reservasi dilepas",
+  "Reserved stock sold": "Pesanan dibayar",
+  "Paid order cancelled; stock returned": "Pesanan lunas dibatalkan, stok kembali",
+};
+
 const emptyCreate = {warehouse_id: "", product_variant_id: "", initial_stock: "", reason: "Stok awal"};
 
 function InventoryPage() {
@@ -44,6 +60,7 @@ function InventoryPage() {
   const selectedWarehouse = options.warehouses.find((item) => String(item.id) === String(form.warehouse_id));
   const selectedVariant = options.variants.find((item) => String(item.id) === String(form.product_variant_id));
 
+  const threshold = Number(resource.meta.raw?.low_stock_threshold ?? 5);
   const rows = resource.rows.map((item) => ({
     ...item,
     sku: item.variant?.sku || "—",
@@ -136,20 +153,20 @@ function InventoryPage() {
         <section className="adm-card adm-table-card">
           {rows.length ? (
             <div className="adm-table-wrap">
-              <table className="adm-inventory-table">
+              <table className="adm-inventory-table adm-card-table adm-card-table--wide">
                 <thead><tr><th>Varian</th><th>SKU</th><th>Gudang</th><th className="num">Fisik</th><th className="num">Tersedia</th><th className="num">Dicadangkan</th><th className="num">Terjual</th><th>Status</th><th><span className="sr-only">Aksi</span></th></tr></thead>
                 <tbody>
                   {rows.map((item) => (
                     <tr key={item.id}>
-                      <td><strong>{item.product}</strong><small>Ukuran {item.size}</small></td>
+                      <td data-label="Varian"><strong>{item.product}</strong><small>Ukuran {item.size}</small></td>
                       <td data-label="SKU"><code>{item.sku}</code></td>
                       <td data-label="Gudang">{item.warehouseName}</td>
                       <td className="num" data-label="Fisik"><strong>{item.on_hand}</strong></td>
                       <td className="num" data-label="Tersedia"><strong>{item.available}</strong></td>
-                      <td className="num" data-label="Dicadangkan">{item.reserved}</td>
+                      <td className="num" data-label="Dipesan">{item.reserved}</td>
                       <td className="num" data-label="Terjual">{item.sold}</td>
-                      <td><Badge tone={item.available === 0 ? "danger" : item.available <= 5 ? "warning" : "success"}>{item.available === 0 ? "Habis" : item.available <= 5 ? "Stok rendah" : "Tersedia"}</Badge></td>
-                      <td><button className="adm-row-action" onClick={() => openEdit(item)} aria-label={`Kelola stok ${item.sku}`}><Icon name="arrow" /></button></td>
+                      <td data-label="Status"><Badge tone={item.available === 0 ? "danger" : item.available <= threshold ? "warning" : "success"}>{item.available === 0 ? "Habis" : item.available <= threshold ? "Stok rendah" : "Tersedia"}</Badge></td>
+                      <td data-label="Aksi"><button className="adm-row-action" onClick={() => openEdit(item)} aria-label={`Kelola stok ${item.sku}`}><Icon name="arrow" /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -201,12 +218,12 @@ function InventoryPage() {
                 </div>
               ) : (
                 <>
-                  <div className="adm-stock-summary"><span>Fisik<strong>{editor.item.on_hand}</strong></span><span>Reserved<strong>{editor.item.reserved}</strong></span><span>Tersedia<strong>{editor.item.available}</strong></span><span>Terjual<strong>{editor.item.sold}</strong></span></div>
+                  <div className="adm-stock-summary"><span>Fisik<strong>{editor.item.on_hand}</strong></span><span>Dipesan<strong>{editor.item.reserved}</strong></span><span>Tersedia<strong>{editor.item.available}</strong></span><span>Terjual<strong>{editor.item.sold}</strong></span></div>
                   <div className="adm-form-grid">
                     <label>Perubahan jumlah<input required type="number" min={-Number(editor.item.available)} max="1000000" step="1" placeholder="+10 atau -3" value={form.delta} onChange={(event) => setForm({...form, delta: event.target.value})} /><small>Gunakan angka positif untuk menambah dan negatif untuk mengurangi.</small></label>
                     <label>Alasan perubahan<input required maxLength="255" placeholder="Contoh: penerimaan supplier atau stock opname" value={form.reason} onChange={(event) => setForm({...form, reason: event.target.value})} /></label>
                   </div>
-                  <section className="adm-inventory-history"><h3>Riwayat movement</h3>{movements.length ? movements.map((movement) => <div key={movement.id}><span><strong>{movement.type}</strong><small>{movement.reason}</small></span><b className={movement.quantity_delta >= 0 ? "positive" : "negative"}>{movement.quantity_delta >= 0 ? "+" : ""}{movement.quantity_delta}</b><small>{new Intl.DateTimeFormat("id-ID", {dateStyle: "medium", timeStyle: "short"}).format(new Date(movement.created_at))}</small></div>) : <p className="adm-muted-copy">Belum ada movement tercatat.</p>}</section>
+                  <section className="adm-inventory-history"><h3>Riwayat movement</h3>{movements.length ? movements.map((movement) => <div key={movement.id}><span><strong>{MOVEMENT_TYPES[movement.type] || movement.type}</strong><small>{SYSTEM_REASONS[movement.reason] || movement.reason}</small></span><b className={movement.quantity_delta >= 0 ? "positive" : "negative"}>{movement.quantity_delta >= 0 ? "+" : ""}{movement.quantity_delta}</b><small>{new Intl.DateTimeFormat("id-ID", {dateStyle: "medium", timeStyle: "short"}).format(new Date(movement.created_at))}</small></div>) : <p className="adm-muted-copy">Belum ada movement tercatat.</p>}</section>
                 </>
               )}
               </div>
