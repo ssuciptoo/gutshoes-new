@@ -6,7 +6,7 @@
 #   admin          buat/ubah akun admin (password diminta lewat prompt)
 #   backup         dump database ke backups/ (dipanggil cron harian; simpan 14 hari)
 #   status         status container, health API, dan pemakaian memori
-#   check          cek konfigurasi Midtrans sandbox tanpa membuat transaksi
+#   check          cek konfigurasi Midtrans sandbox + uji server key ke API sandbox (tanpa transaksi)
 #   logs [layanan] ikuti log (mis. logs api, logs horizon)
 set -euo pipefail
 
@@ -78,7 +78,7 @@ case "$cmd" in
     free -h
     ;;
   check)
-    compose run --rm --no-deps api php artisan midtrans:sandbox-check
+    compose run --rm --no-deps api php artisan midtrans:sandbox-check --verify
     ;;
   logs)
     compose logs -f --tail=100 "$@"

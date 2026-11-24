@@ -75,7 +75,7 @@ jalankan `deploy.sh deploy` lagi. Lanjutkan ke bagian 5 (dashboard Midtrans/Cler
 | `deploy.sh status` | Status container, health API, pemakaian RAM |
 | `deploy.sh logs api` | Log satu layanan (`api`, `horizon`, `scheduler`, `caddy`, `mysql`) |
 | `deploy.sh backup` | Backup database manual ke `/opt/gutshoes/backups` |
-| `deploy.sh check` | Cek konfigurasi Midtrans sandbox |
+| `deploy.sh check` | Cek konfigurasi Midtrans sandbox dan uji server key ke API sandbox (tanpa membuat transaksi) |
 
 Bagian 1–4 di bawah menjelaskan detail dan alternatif (mis. platform selain VPS).
 

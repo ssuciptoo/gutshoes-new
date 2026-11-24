@@ -19,6 +19,29 @@ it('blocks sandbox tools without sandbox credentials or with production endpoint
     $this->artisan('midtrans:sandbox-recover missing')->assertFailed();
     Http::assertNothingSent();
 });
+it('accepts sandbox keys without the SB- prefix and sends nothing unless asked to verify', function () {
+    config(['services.midtrans.server_key' => 'Mid-server-newformat']);
+    $this->artisan('midtrans:sandbox-check')->expectsOutputToContain('--verify')->assertSuccessful();
+    config(['services.midtrans.server_key' => ' "SB-Mid-server-quoted"']);
+    $this->artisan('midtrans:sandbox-check')->assertFailed();
+    Http::assertNothingSent();
+});
+
+it('verifies the server key against the sandbox API without creating a transaction', function () {
+    config(['services.midtrans.server_key' => 'Mid-server-newformat']);
+    Http::fake(['api.sandbox.midtrans.com/v2/*/status' => Http::response(['status_code' => '404', 'status_message' => "Transaction doesn't exist."])]);
+    $this->artisan('midtrans:sandbox-check --verify')->expectsOutputToContain('diterima')->assertSuccessful();
+    Http::assertSent(fn ($request) => $request->method() === 'GET' && str_contains($request->url(), '/GS-SANDBOX-CHECK-')
+        && $request->hasHeader('Authorization', 'Basic '.base64_encode('Mid-server-newformat:')));
+    Http::assertSentCount(1);
+});
+
+it('reports a production key that the sandbox API rejects', function () {
+    config(['services.midtrans.server_key' => 'Mid-server-production']);
+    Http::fake(['api.sandbox.midtrans.com/*' => Http::response(['status_code' => '401', 'status_message' => 'Unknown Merchant server_key/id'])]);
+    $this->artisan('midtrans:sandbox-check --verify')->expectsOutputToContain('ditolak')->assertFailed();
+});
+
 it('recovers a stale uncharged intent on the same order without exposing its token', function () {
     ['order' => $order] = payableOrder();
     $payment = Payment::create(['order_id' => $order->id, 'provider' => 'MIDTRANS', 'status' => 'PENDING', 'amount' => $order->grand_total, 'currency' => 'IDR', 'expires_at' => $order->expires_at, 'initialization_state' => 'uncertain']);
