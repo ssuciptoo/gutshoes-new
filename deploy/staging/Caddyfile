@@ -1,0 +1,21 @@
+# Reverse proxy + HTTPS otomatis (Let's Encrypt) untuk staging.
+# Domain diambil dari STAGING_DOMAIN di .env; DNS kedua subdomain harus sudah mengarah ke IP VPS
+# sebelum Caddy start, kalau tidak penerbitan sertifikat gagal.
+{
+	email {$ACME_EMAIL}
+}
+
+staging.{$STAGING_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy storefront:80
+}
+
+api-staging.{$STAGING_DOMAIN} {
+	encode zstd gzip
+	# Upload gambar produk dibatasi 5 MB oleh validasi Laravel; beri sedikit ruang untuk multipart.
+	request_body {
+		max_size 8MB
+	}
+	# Caddy mengganti X-Forwarded-For dengan IP pengunjung asli; Laravel mempercayainya lewat TRUSTED_PROXIES.
+	reverse_proxy api:8080
+}

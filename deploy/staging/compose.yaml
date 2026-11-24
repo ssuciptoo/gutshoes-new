@@ -1,0 +1,142 @@
+# Staging GutShoes untuk satu VPS kecil (1 vCPU / 2 GB RAM).
+# Dijalankan dari /opt/gutshoes di VPS lewat deploy/staging/deploy.sh; lihat docs/STAGING_DEPLOYMENT.md.
+#
+# File yang dibaca (tidak ada di Git):
+#   .env         variabel compose: domain, tag image, password MySQL/Redis   (contoh: .env.example)
+#   backend.env  konfigurasi Laravel: kunci Clerk/Midtrans/SMTP, dll.        (contoh: apps/backend/.env.staging.example)
+name: gutshoes-staging
+
+x-backend: &backend
+  image: ${BACKEND_IMAGE:?isi BACKEND_IMAGE di .env}:${IMAGE_TAG:-staging}
+  restart: unless-stopped
+  env_file: backend.env
+  # Nilai di bawah menimpa backend.env agar koneksi database/Redis hanya ditulis sekali (di .env).
+  environment:
+    APP_ENV: staging
+    APP_DEBUG: "false"
+    APP_URL: https://api-staging.${STAGING_DOMAIN}
+    FRONTEND_URL: https://staging.${STAGING_DOMAIN}
+    STOREFRONT_URL: https://staging.${STAGING_DOMAIN}
+    CORS_ALLOWED_ORIGINS: https://staging.${STAGING_DOMAIN}
+    SANCTUM_STATEFUL_DOMAINS: staging.${STAGING_DOMAIN},api-staging.${STAGING_DOMAIN}
+    SESSION_DOMAIN: .${STAGING_DOMAIN}
+    CLERK_AUTHORIZED_PARTIES: https://staging.${STAGING_DOMAIN}
+    # Caddy berada di jaringan internal ini; hanya proxy itu yang boleh mengirim X-Forwarded-*.
+    TRUSTED_PROXIES: 172.28.0.0/16
+    DB_CONNECTION: mysql
+    DB_HOST: mysql
+    DB_PORT: "3306"
+    DB_DATABASE: gutshoes
+    DB_USERNAME: gutshoes
+    DB_PASSWORD: ${MYSQL_PASSWORD:?isi MYSQL_PASSWORD di .env}
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    REDIS_PASSWORD: ${REDIS_PASSWORD:?isi REDIS_PASSWORD di .env}
+    SESSION_DRIVER: redis
+    CACHE_STORE: redis
+    QUEUE_CONNECTION: redis
+    HORIZON_MAX_PROCESSES: ${HORIZON_MAX_PROCESSES:-1}
+  volumes:
+    - product-images:/app/storage/app/public
+  networks: [gutshoes]
+  depends_on:
+    mysql: {condition: service_healthy}
+    redis: {condition: service_healthy}
+
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      STAGING_DOMAIN: ${STAGING_DOMAIN:?isi STAGING_DOMAIN di .env}
+      ACME_EMAIL: ${ACME_EMAIL:?isi ACME_EMAIL di .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    mem_limit: 96m
+    networks: [gutshoes]
+
+  api:
+    <<: *backend
+    # Cache config/route/view saat start: env baru tersedia saat runtime, bukan saat build image.
+    command: sh -c "php artisan optimize && exec frankenphp php-server --listen :8080 --root public/"
+    mem_limit: 448m
+    healthcheck:
+      test: ["CMD-SHELL", "php -r \"exit(@file_get_contents('http://127.0.0.1:8080/up') === false ? 1 : 0);\""]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  horizon:
+    <<: *backend
+    command: sh -c "php artisan optimize && exec php artisan horizon"
+    stop_grace_period: 60s
+    mem_limit: 320m
+
+  scheduler:
+    <<: *backend
+    # Hanya satu container scheduler, agar job terjadwal tidak berjalan dua kali.
+    command: sh -c "php artisan optimize && exec php artisan schedule:work"
+    mem_limit: 192m
+
+  storefront:
+    image: ${STOREFRONT_IMAGE:?isi STOREFRONT_IMAGE di .env}:${IMAGE_TAG:-staging}
+    restart: unless-stopped
+    # Image storefront baru ada setelah domain + kunci Clerk diisi di GitHub (lihat panduan).
+    profiles: [storefront]
+    mem_limit: 64m
+    networks: [gutshoes]
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: gutshoes
+      MYSQL_USER: gutshoes
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?isi MYSQL_PASSWORD di .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?isi MYSQL_ROOT_PASSWORD di .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql.cnf:/etc/mysql/conf.d/gutshoes.cnf:ro
+    mem_limit: 640m
+    # Tidak ada "ports": MySQL hanya bisa dijangkau dari jaringan internal compose.
+    networks: [gutshoes]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    # noeviction: sesi admin dan antrean job tidak boleh dibuang diam-diam saat memori penuh.
+    command: redis-server --requirepass "${REDIS_PASSWORD:?isi REDIS_PASSWORD di .env}" --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
+    volumes:
+      - redis-data:/data
+    mem_limit: 160m
+    networks: [gutshoes]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 20
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+networks:
+  gutshoes:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  caddy-data:
+  caddy-config:
+  mysql-data:
+  redis-data:
+  product-images:

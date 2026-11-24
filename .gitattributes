@@ -1,0 +1,4 @@
+# File yang dijalankan/dibaca di server Linux harus LF, juga saat repo di-checkout di Windows
+# (core.autocrlf=true). Skrip ber-CRLF gagal di bash: "$'\r': command not found".
+*.sh text eol=lf
+deploy/** text eol=lf
