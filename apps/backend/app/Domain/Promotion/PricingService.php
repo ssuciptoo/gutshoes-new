@@ -31,7 +31,10 @@ class PricingService
             $subtotal += $line;
             $promotion = $promotions->first(fn (Promotion $candidate) => $candidate->products->contains('id', $item->variant->product_id));
             // IDR has no minor unit at Midtrans; keep every amount in whole rupiah.
-            $discount = $promotion ? min($line, round($promotion->type === 'PERCENTAGE' ? $line * ((float) $promotion->value / 100) : (float) $promotion->value)) : 0.0;
+            // Potongan nominal berlaku per pasang (per unit), tidak melebihi harga satuannya.
+            $discount = $promotion ? min($line, round($promotion->type === 'PERCENTAGE'
+                ? $line * ((float) $promotion->value / 100)
+                : min($unit, (float) $promotion->value) * $item->quantity)) : 0.0;
             $productDiscount += $discount;
             $lineTotals[] = ['product_id' => $item->variant->product_id, 'amount' => $line - $discount];
             $lines[] = ['variant_id' => $item->product_variant_id, 'sku' => $item->variant->sku, 'quantity' => $item->quantity, 'unit_price' => number_format($unit, 2, '.', ''), 'discount' => number_format($discount, 2, '.', ''), 'line_total' => number_format($line - $discount, 2, '.', '')];

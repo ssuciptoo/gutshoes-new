@@ -187,7 +187,11 @@ function PromotionEditor({kind, item, onClose, onSaved}) {
             </label>
             {form.type !== "FREE_SHIPPING" && (
               <label>
-                {form.type === "PERCENTAGE" ? "Besar potongan (%)" : "Besar potongan (Rp)"}
+                {form.type === "PERCENTAGE"
+                  ? "Besar potongan (%)"
+                  : isVoucher
+                    ? "Besar potongan (Rp)"
+                    : "Besar potongan per pasang (Rp)"}
                 <input
                   required
                   type="number"

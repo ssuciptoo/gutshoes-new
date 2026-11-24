@@ -55,7 +55,14 @@ it('applies only highest priority product discount then stacks one voucher', fun
     $high->products()->attach($product);
     Voucher::create(['code' => 'SAVE20', 'name' => 'Save 20', 'type' => 'PERCENTAGE', 'value' => '20.00', 'minimum_amount' => '100000.00', 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
     $result = app(PricingService::class)->calculate($cart, 'SAVE20', '20000.00');
-    expect($result['subtotal'])->toBe('200000.00')->and($result['product_discount'])->toBe('50000.00')->and($result['voucher_discount'])->toBe('30000.00')->and($result['grand_total'])->toBe('140000.00');
+    // Promo nominal 50.000 berlaku per pasang: 2 pasang x 50.000. Voucher 20% dari sisa 100.000.
+    expect($result['subtotal'])->toBe('200000.00')->and($result['product_discount'])->toBe('100000.00')
+        ->and($result['items'][0]['discount'])->toBe('100000.00')->and($result['items'][0]['line_total'])->toBe('100000.00')
+        ->and($result['voucher_discount'])->toBe('20000.00')->and($result['grand_total'])->toBe('100000.00');
+
+    // Potongan per pasang tidak boleh melebihi harga satuan (harga tidak bisa minus).
+    $high->update(['value' => '150000.00']);
+    expect(app(PricingService::class)->calculate($cart, null, '0.00')['product_discount'])->toBe('200000.00');
 });
 
 it('limits a product-restricted voucher to the discounted price of those products', function () {
