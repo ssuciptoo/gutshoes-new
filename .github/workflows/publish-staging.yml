@@ -68,7 +68,7 @@ jobs:
             --tag "${{ steps.meta.outputs.storefront }}:staging" apps/storefront
           docker push --all-tags "${{ steps.meta.outputs.storefront }}"
 
-      - name: Storefront skipped
+      - name: Warn if storefront variables are missing
         if: env.STAGING_DOMAIN == '' || env.STAGING_CLERK_PUBLISHABLE_KEY == ''
         run: echo "::warning::Storefront tidak dibangun. Isi variable STAGING_DOMAIN dan STAGING_CLERK_PUBLISHABLE_KEY di environment 'staging'."
 

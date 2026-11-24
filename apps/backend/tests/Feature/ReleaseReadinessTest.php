@@ -96,3 +96,13 @@ it('starts Horizon queue workers in every deployed environment', function (strin
     expect($supervisors)->not->toBeEmpty()
         ->and(collect($supervisors)->first()->maxProcesses)->toBeGreaterThan(0);
 })->with(['production', 'staging']);
+
+it('defaults to a Redis client that the Docker image can load', function () {
+    // .env lokal mengisi REDIS_CLIENT=predis sehingga test biasa tidak melihat masalahnya; server yang
+    // tidak mengisinya memakai nilai bawaan config. Tanpa ekstensi phpredis di image, nilai bawaan
+    // "phpredis" membuat setiap request yang menyentuh Redis gagal 500.
+    $dockerfile = (string) file_get_contents(base_path('Dockerfile'));
+    $imageHasPhpRedis = preg_match('/install-php-extensions[^\n]*(?:\\\n[^\n]*)*\bredis\b/', $dockerfile) === 1;
+
+    expect($imageHasPhpRedis || str_contains((string) file_get_contents(config_path('database.php')), "env('REDIS_CLIENT', 'predis')"))->toBeTrue();
+});

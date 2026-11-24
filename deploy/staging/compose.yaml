@@ -32,6 +32,7 @@ x-backend: &backend
     DB_DATABASE: gutshoes
     DB_USERNAME: gutshoes
     DB_PASSWORD: ${MYSQL_PASSWORD:?isi MYSQL_PASSWORD di .env}
+    REDIS_CLIENT: predis
     REDIS_HOST: redis
     REDIS_PORT: "6379"
     REDIS_PASSWORD: ${REDIS_PASSWORD:?isi REDIS_PASSWORD di .env}

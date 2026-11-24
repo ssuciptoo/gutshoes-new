@@ -145,7 +145,9 @@ return [
 
     'redis' => [
 
-        'client' => env('REDIS_CLIENT', 'phpredis'),
+        // predis (library PHP di composer.json) karena image Docker tidak memasang ekstensi phpredis;
+        // dengan phpredis setiap request yang menyentuh Redis (rate limit, cache, sesi) gagal 500.
+        'client' => env('REDIS_CLIENT', 'predis'),
 
         'options' => [
             'cluster' => env('REDIS_CLUSTER', 'redis'),
