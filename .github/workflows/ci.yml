@@ -78,6 +78,8 @@ jobs:
         env:
           VITE_API_URL: https://api-ci.invalid/api/v1
           VITE_SITE_URL: https://ci.invalid
+          # Kunci publishable tiruan: build hanya memeriksa format, tidak menghubungi Clerk.
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci-placeholder
 
   docker:
     name: Build Docker images
@@ -91,4 +93,4 @@ jobs:
         run: docker build --file apps/backend/Dockerfile --tag gutshoes-backend:ci apps/backend
 
       - name: Build storefront image
-        run: docker build --file apps/storefront/Dockerfile --tag gutshoes-storefront:ci --build-arg VITE_API_URL=https://api-ci.invalid/api/v1 apps/storefront
+        run: docker build --file apps/storefront/Dockerfile --tag gutshoes-storefront:ci --build-arg VITE_API_URL=https://api-ci.invalid/api/v1 --build-arg VITE_SITE_URL=https://ci.invalid --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_ci-placeholder --build-arg VITE_BUILD_MODE=staging apps/storefront

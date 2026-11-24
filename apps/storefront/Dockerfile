@@ -6,9 +6,15 @@ RUN npm ci
 
 COPY . .
 ARG VITE_API_URL
+# Nilai publik yang ikut masuk bundle (bukan secret). .env.* tidak ikut ke image (.dockerignore),
+# jadi wajib dikirim lewat --build-arg; vite.config.js menolak build bila kosong atau salah format.
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ARG VITE_SITE_URL
 # production (default) or staging; vite.config.js rejects a missing, non-HTTPS or example API URL.
 ARG VITE_BUILD_MODE=production
-ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_API_URL=${VITE_API_URL} \
+    VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY} \
+    VITE_SITE_URL=${VITE_SITE_URL}
 RUN npm run build -- --mode "${VITE_BUILD_MODE}"
 
 FROM nginx:1.27-alpine
