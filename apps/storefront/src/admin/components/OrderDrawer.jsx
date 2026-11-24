@@ -6,6 +6,10 @@ import useDialogFocus from "../hooks/useDialogFocus";
 import Badge from "./Badge";
 import Button from "./Button";
 import Icon from "./Icon";
+import {REFUNDS_ENABLED} from "../../lib/features";
+
+// V1: tanpa refund, pesanan lunas tidak bisa dibatalkan lewat aplikasi.
+const cancellableStatuses = REFUNDS_ENABLED ? ["PENDING_PAYMENT", "PAID"] : ["PENDING_PAYMENT"];
 
 // Catatan yang ditulis sistem (bukan admin) diterjemahkan untuk riwayat status.
 const SYSTEM_NOTES = {
@@ -297,13 +301,13 @@ function OrderDrawer({order, onClose, onUpdated}) {
                       Tandai sudah diterima
                     </button>
                   )}
-                  {["PENDING_PAYMENT", "PAID"].includes(status) && (
+                  {cancellableStatuses.includes(status) && (
                     <button onClick={() => setAction("cancel")}>
                       Batalkan pesanan
                     </button>
                   )}
                   {!nextAction &&
-                    !["PENDING_PAYMENT", "PAID"].includes(status) && (
+                    !cancellableStatuses.includes(status) && (
                       <p className="adm-muted-copy">
                         Tidak ada transisi operasional berikutnya untuk status
                         ini.

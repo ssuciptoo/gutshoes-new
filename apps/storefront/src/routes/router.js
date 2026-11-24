@@ -1,3 +1,5 @@
+import {REFUNDS_ENABLED} from "../lib/features";
+
 const STOREFRONT_PAGES = new Set([
   "home",
   "catalog",
@@ -20,13 +22,13 @@ const STOREFRONT_PAGES = new Set([
 ]);
 
 const ADMIN_SECTIONS = new Set([
+  ...(REFUNDS_ENABLED ? ["refunds"] : []),
   "dashboard",
   "products",
   "catalog",
   "sizes",
   "inventory",
   "orders",
-  "refunds",
   "customers",
   "promotions",
   "settings",

@@ -39,6 +39,8 @@ class CancellationRefundController extends Controller
 
     public function refund(Refund $refund, ProcessRefundService $refunds): JsonResponse
     {
+        abort_unless(config('gutshoes.refunds_enabled'), 404);
+
         return response()->json(['data' => $refunds->process($refund)]);
     }
 }

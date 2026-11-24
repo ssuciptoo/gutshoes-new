@@ -6,6 +6,11 @@ return [
     // dipalsukan; tetapi di belakang proxy, rate limit per IP akan memakai IP proxy.
     'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))))),
 
+    // V1: fitur refund ditunda. Saat false, pesanan yang sudah dibayar tidak bisa dibatalkan
+    // lewat aplikasi dan endpoint proses refund ditutup. Pencatatan refund untuk pembayaran
+    // yang terlambat (rekonsiliasi) tetap dibuat agar bisa ditangani manual.
+    'refunds_enabled' => (bool) env('GUTSHOES_REFUNDS_ENABLED', false),
+
     'shipping_driver' => env('SHIPPING_DRIVER', 'fake'),
     'tracking_driver' => env('TRACKING_DRIVER', env('SHIPPING_DRIVER', 'fake')),
     // 0 disables caching. Rates may be up to this many minutes old at checkout.

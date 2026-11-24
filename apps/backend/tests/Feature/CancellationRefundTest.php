@@ -47,6 +47,20 @@ it('cancels unpaid orders and releases reservation exactly once', function () {
     $this->assertDatabaseCount('refunds', 0);
 });
 
+it('blocks paid cancellations and refund processing while refunds are disabled', function () {
+    config(['gutshoes.refunds_enabled' => false]);
+    ['order' => $order] = cancellableOrder('PAID');
+    $this->withHeader('Idempotency-Key', 'refund-off-00000001')->postJson("/api/v1/orders/{$order->order_number}/cancel", ['email' => $order->customer_email, 'reason' => 'Changed mind'])->assertStatus(422);
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PAID');
+    $this->assertDatabaseCount('refunds', 0);
+
+    $payment = $order->payment;
+    $refund = Refund::create(['order_id' => $order->id, 'payment_id' => $payment->id, 'idempotency_key' => 'manual-'.$order->id, 'status' => 'PENDING', 'amount' => $payment->amount, 'currency' => 'IDR', 'reason' => 'Late payment']);
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $this->actingAs($admin)->postJson("/api/v1/admin/refunds/{$refund->id}/process")->assertNotFound();
+    expect($refund->refresh()->status->value ?? $refund->status)->toBe('PENDING');
+});
+
 it('creates and processes one idempotent refund for a paid cancellation', function () {
     ['order' => $order] = cancellableOrder('PAID');
     $this->withHeader('Idempotency-Key', 'refund-key-00000001')->postJson("/api/v1/orders/{$order->order_number}/cancel", ['email' => $order->customer_email, 'reason' => 'Duplicate purchase'])->assertCreated()->assertJsonPath('data.refund.status', 'PENDING');

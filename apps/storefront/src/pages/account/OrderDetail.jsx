@@ -5,6 +5,7 @@ import AccountShell from "../../components/layout/AccountShell";
 import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
+import {REFUNDS_ENABLED} from "../../lib/features";
 import {REFUND_STATUS, canContinuePayment, courierLabel, formatDeadline, orderStatusLabel, paymentStatusLabel} from "../../lib/orderStatus";
 
 export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
@@ -77,7 +78,7 @@ export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
           Diskon {rupiah(Number(order.product_discount) + Number(order.voucher_discount))}<br />Total <strong>{rupiah(Number(order.grand_total))}</strong></p>
       </section></div>
       {order.refunds?.map(refund => <section className="refund-card" key={refund.id}><h3>Refund · {REFUND_STATUS[refund.status] || refund.status}</h3><p>{rupiah(Number(refund.amount))}</p></section>)}
-      {["PENDING_PAYMENT", "PAID"].includes(order.status) && <div className="order-danger-zone"><p>Pembatalan tersedia sebelum pesanan mulai diproses.</p>
+      {(REFUNDS_ENABLED ? ["PENDING_PAYMENT", "PAID"] : ["PENDING_PAYMENT"]).includes(order.status) && <div className="order-danger-zone"><p>Pembatalan tersedia sebelum pesanan mulai diproses.</p>
         <Button variant="secondary" disabled={busy} onClick={() => setConfirm(true)}>{busy ? "Memproses…" : "Ajukan pembatalan"}</Button></div>}
     </>}
   </AccountShell>;

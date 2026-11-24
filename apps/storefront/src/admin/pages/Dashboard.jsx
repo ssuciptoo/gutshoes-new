@@ -10,6 +10,7 @@ import Metric from "../components/Metric";
 import Icon from "../components/Icon";
 import PageHead from "../components/PageHead";
 import ResourceState from "../components/ResourceState";
+import {REFUNDS_ENABLED} from "../../lib/features";
 
 function Dashboard({navigate}) {
   const resource = useAdminResource(loadDashboard);
@@ -113,7 +114,7 @@ function Dashboard({navigate}) {
               <Metric
                 label="Refund tertunda"
                 value={data.operations?.refunds_pending || 0}
-                delta="Perlu tindak lanjut"
+                delta={REFUNDS_ENABLED ? "Perlu tindak lanjut" : "Tangani manual di luar aplikasi"}
                 attention={Number(data.operations?.refunds_pending || 0) > 0}
               />
             </div>
@@ -151,7 +152,7 @@ function Dashboard({navigate}) {
               <b>{data.low_stock_count || 0}</b>
               <Icon name="arrow" />
             </button>
-            {Number(data.operations?.refunds_pending || 0) > 0 && (
+            {REFUNDS_ENABLED && Number(data.operations?.refunds_pending || 0) > 0 && (
               <button onClick={() => navigate("refunds")}>
                 <span className="adm-priority-icon danger">
                   <Icon name="refund" />

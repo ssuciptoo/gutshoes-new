@@ -39,6 +39,9 @@ class CancelOrderService
                     return $cancellation->load('order');
                 }
             }
+            if ($status === OrderStatus::PAID->value && ! config('gutshoes.refunds_enabled')) {
+                throw new DomainException('Pesanan yang sudah dibayar belum dapat dibatalkan lewat aplikasi. Silakan hubungi layanan pelanggan.');
+            }
             if (! in_array($status, [OrderStatus::PENDING_PAYMENT->value, OrderStatus::PAID->value], true)) {
                 throw new DomainException("Pesanan dengan status {$status} tidak dapat dibatalkan.");
             }

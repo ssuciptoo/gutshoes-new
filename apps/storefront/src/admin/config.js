@@ -1,3 +1,5 @@
+import {REFUNDS_ENABLED} from "../lib/features";
+
 export const navGroups = [
   {
     label: "Ruang kerja",
@@ -16,7 +18,7 @@ export const navGroups = [
     label: "Penjualan",
     items: [
       ["orders", "orders", "Pesanan"],
-      ["refunds", "refund", "Refund"],
+      ...(REFUNDS_ENABLED ? [["refunds", "refund", "Refund"]] : []),
       ["customers", "users", "Pelanggan"],
       ["promotions", "tag", "Promosi"],
     ],

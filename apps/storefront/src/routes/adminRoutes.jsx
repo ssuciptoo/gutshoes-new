@@ -10,6 +10,7 @@ import Customers from "../admin/pages/Customers";
 import Promotions from "../admin/pages/Promotions";
 import Settings from "../admin/pages/Settings";
 import Audit from "../admin/pages/Audit";
+import {REFUNDS_ENABLED} from "../lib/features";
 
 export const adminRoutes = [
   {
@@ -28,7 +29,9 @@ export const adminRoutes = [
       <Orders key={JSON.stringify(context.params || {})} params={context.params} />
     ),
   },
-  {section: "refunds", path: "/admin/refunds", render: () => <Refunds />},
+  ...(REFUNDS_ENABLED
+    ? [{section: "refunds", path: "/admin/refunds", render: () => <Refunds />}]
+    : []),
   {
     section: "customers",
     path: "/admin/customers",
