@@ -212,12 +212,21 @@ return [
         ],
     ],
 
+    // Setiap APP_ENV yang menjalankan Horizon wajib punya entri di sini: environment yang tidak
+    // terdaftar tidak mendapat worker sama sekali (job, termasuk email pesanan, tertahan di antrean).
+    // HORIZON_MAX_PROCESSES membatasi jumlah worker; tiap worker memakai sekitar 50–100 MB RAM.
     'environments' => [
         'production' => [
             'supervisor-1' => [
-                'maxProcesses' => 10,
+                'maxProcesses' => (int) env('HORIZON_MAX_PROCESSES', 10),
                 'balanceMaxShift' => 1,
                 'balanceCooldown' => 3,
+            ],
+        ],
+
+        'staging' => [
+            'supervisor-1' => [
+                'maxProcesses' => (int) env('HORIZON_MAX_PROCESSES', 2),
             ],
         ],
 

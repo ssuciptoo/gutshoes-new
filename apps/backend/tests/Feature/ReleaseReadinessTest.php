@@ -10,6 +10,7 @@ use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
+use Laravel\Horizon\ProvisioningPlan;
 
 uses(RefreshDatabase::class);
 
@@ -87,3 +88,11 @@ it('renders a clean order email with HTML and plain text versions', function () 
         ->and($html)->not->toContain('Status email', 'PENDING')
         ->and($text)->toContain('Total: Rp457.000', 'Lihat pesanan & bayar: https://toko.test/orders/GS-MAIL-0002');
 });
+
+it('starts Horizon queue workers in every deployed environment', function (string $environment) {
+    // Environment tanpa entri di config/horizon.php tidak mendapat worker, sehingga email pesanan tertahan.
+    $supervisors = ProvisioningPlan::get('ci-check')->toSupervisorOptions()[$environment] ?? [];
+
+    expect($supervisors)->not->toBeEmpty()
+        ->and(collect($supervisors)->first()->maxProcesses)->toBeGreaterThan(0);
+})->with(['production', 'staging']);

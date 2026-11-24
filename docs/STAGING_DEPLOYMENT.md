@@ -96,6 +96,7 @@ Salin `apps/backend/.env.staging.example` sebagai acuan, lalu isi nilainya di se
 |---|---|
 | `CLERK_JWT_KEY` | Public key JWKS (PEM, baris baru ditulis `\n`) agar verifikasi token tanpa memanggil jaringan |
 | `SHIPPING_QUOTE_CACHE_MINUTES` | Lama cache ongkir (default 15) |
+| `HORIZON_MAX_PROCESSES` | Jumlah maksimum worker antrean (default staging 2, production 10; ±50–100 MB per worker) |
 | `GUTSHOES_ADMIN_EMAIL/NAME/PASSWORD` | Untuk membuat admin tanpa prompt (langkah 4.3). Hapus lagi setelah admin dibuat |
 
 ---
@@ -276,6 +277,55 @@ curl -fsS https://staging.domain-anda.com/sitemap.xml | head
 - [ ] Login admin 5× dengan password salah: percobaan ke-6 ditolak (429) selama 15 menit.
 
 ---
+
+## 6a. VPS kecil (1 vCPU / 2 GB RAM)
+
+Cukup untuk staging dengan sedikit pengguna (uji internal/UAT), asalkan:
+
+- **Jangan build image di VPS.** `npm ci` + Vite dan `composer install` bisa memakan >1 GB RAM dan
+  menghentikan layanan lain. Build di CI/laptop, push ke registry, VPS hanya `docker pull`.
+- **Tambahkan swap 2 GB** sebagai pengaman lonjakan memori (bukan pengganti RAM):
+
+  ```bash
+  sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+  echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+  ```
+
+- **Batasi memori MySQL**; default MySQL 8.4 terlalu boros untuk 2 GB. Contoh `my.cnf`:
+
+  ```ini
+  [mysqld]
+  innodb_buffer_pool_size = 256M
+  max_connections = 40
+  performance_schema = OFF
+  ```
+
+- **Batasi Redis**: `maxmemory 128mb` dan `maxmemory-policy noeviction` (sesi dan antrean tidak boleh
+  dibuang diam-diam).
+- **Worker antrean**: `HORIZON_MAX_PROCESSES=1` cukup untuk staging. FrankenPHP tidak perlu diatur:
+  jumlah thread PHP bawaannya 2× jumlah CPU, jadi 2 thread di VPS 1 vCPU.
+- **Pasang batas memori per container** agar satu proses bocor tidak menjatuhkan semuanya, misalnya
+  `mem_limit: 512m` untuk `api`, `384m` untuk `horizon`, `192m` untuk `scheduler`, `64m` untuk
+  `storefront`.
+- Bila memungkinkan, pakai **MySQL managed** (atau VPS terpisah). Itu membebaskan ±500 MB dan
+  backup jadi urusan penyedia.
+
+Perkiraan pemakaian RAM saat idle:
+
+| Proses | RAM |
+|---|---:|
+| MySQL 8.4 (sudah dibatasi) | 350–450 MB |
+| API FrankenPHP (2 thread) | 150–250 MB |
+| Horizon (1 worker) | 100–150 MB |
+| Scheduler | 60–100 MB |
+| Redis | 20–50 MB |
+| nginx storefront + reverse proxy | 40–60 MB |
+| Docker + sistem operasi | 250–350 MB |
+| **Total** | **±1,0–1,4 GB** |
+
+Yang terasa lambat di 1 vCPU: login (bcrypt), upload gambar besar (encode ulang ke WebP), dan impor
+data wilayah pertama kali (beberapa menit). Untuk production, mulai dari **2 vCPU / 4 GB** dengan
+database terpisah.
 
 ## 7. Deploy berikutnya
 
