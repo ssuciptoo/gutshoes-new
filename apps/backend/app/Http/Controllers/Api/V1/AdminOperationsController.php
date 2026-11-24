@@ -138,14 +138,18 @@ class AdminOperationsController extends Controller
 
     public function updateWarehouse(Request $request): JsonResponse
     {
-        $warehouse = Warehouse::query()->where('is_active', true)->firstOrFail();
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'], 'phone' => ['nullable', 'string', 'max:32'],
-            'address_line' => ['required', 'string', 'max:500'], 'province' => ['required', 'string', 'max:255'],
+            // Kolom address_line bertipe VARCHAR(255); batas lebih besar membuat MySQL menolak simpan (500).
+            'address_line' => ['required', 'string', 'max:255'], 'province' => ['required', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:255'], 'district' => ['required', 'string', 'max:255'], 'subdistrict' => ['required', 'string', 'max:255'],
             'postal_code' => ['required', 'string', 'max:10'], 'provider_area_id' => ['required', 'string', 'max:255'],
         ]);
-        $warehouse->update($data);
+        // Database baru (staging/production tanpa data demo) belum punya gudang: simpan pertama
+        // membuat gudang utama, berikutnya memperbarui gudang aktif yang sama.
+        $warehouse = Warehouse::query()->where('is_active', true)->first()
+            ?? new Warehouse(['code' => 'MAIN', 'is_active' => true]);
+        $warehouse->fill($data)->save();
 
         return response()->json(['data' => $warehouse->refresh()]);
     }

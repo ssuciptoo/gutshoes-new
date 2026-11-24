@@ -95,6 +95,21 @@ it('returns customer operational detail and updates the shipping origin', functi
     expect($warehouse->refresh()->provider_area_id)->toBe('IDNP6IDNC148IDND836IDZ12110');
 });
 
+it('creates the shipping origin on a fresh database without demo data', function () {
+    $admin = User::factory()->create(['role' => UserRole::ADMIN]);
+    $origin = ['name' => 'Gudang Utama', 'phone' => null, 'address_line' => 'Jl. Contoh 1', 'province' => 'DKI Jakarta',
+        'city' => 'Jakarta Pusat', 'district' => 'Gambir', 'subdistrict' => 'Gambir', 'postal_code' => '10110', 'provider_area_id' => '17473'];
+    $this->actingAs($admin)->getJson('/api/v1/admin/warehouse')->assertOk()->assertJsonPath('data', null);
+
+    $this->actingAs($admin)->putJson('/api/v1/admin/warehouse', $origin)->assertOk()->assertJsonPath('data.provider_area_id', '17473');
+    // Simpan kedua memperbarui gudang yang sama, tidak membuat gudang baru.
+    $this->actingAs($admin)->putJson('/api/v1/admin/warehouse', ['provider_area_id' => '17474'] + $origin)->assertOk();
+
+    expect(Warehouse::count())->toBe(1)
+        ->and((bool) Warehouse::first()->is_active)->toBeTrue()
+        ->and(Warehouse::first()->provider_area_id)->toBe('17474');
+});
+
 it('rejects percentage promotions and vouchers above 100', function () {
     $admin = User::factory()->create(['role' => UserRole::ADMIN]);
     $dates = ['starts_at' => now()->toDateTimeString(), 'ends_at' => now()->addDay()->toDateTimeString(), 'is_active' => true];
