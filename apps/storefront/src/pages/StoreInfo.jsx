@@ -3,6 +3,7 @@ import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
 import {formatFootLength} from "../lib/catalog";
 import {formatPolicyDate, returnDays, useStoreInfo, whatsappUrl} from "../lib/storeInfo";
+import {REFUNDS_ENABLED} from "../lib/features";
 
 // Halaman informasi toko: panduan ukuran, kontak, kebijakan privasi, syarat & ketentuan, dan pengembalian.
 // Data toko dikelola admin (Pengaturan). Isi kebijakan adalah draf umum; lihat lib/storeInfo.jsx.
@@ -167,7 +168,11 @@ const PAGES = {
         <h2>Pembayaran</h2>
         <p>Pesanan harus dibayar sebelum batas waktu yang tertera (umumnya 24 jam). Pesanan yang belum dibayar sampai batas waktu dibatalkan otomatis dan stoknya dikembalikan.</p>
         <h2>Pembatalan</h2>
-        <p>Pesanan bisa dibatalkan dari halaman pesanan sebelum mulai diproses. Bila sudah dibayar, dana dikembalikan sesuai kebijakan pengembalian.</p>
+        {REFUNDS_ENABLED ? (
+          <p>Pesanan bisa dibatalkan dari halaman pesanan sebelum mulai diproses. Bila sudah dibayar, dana dikembalikan sesuai kebijakan pengembalian.</p>
+        ) : (
+          <p>Pesanan yang belum dibayar bisa dibatalkan dari halaman pesanan. Pesanan yang sudah dibayar tidak dapat dibatalkan lewat aplikasi; hubungi layanan pelanggan bila ada kendala.</p>
+        )}
         <h2>Pengiriman</h2>
         <p>Estimasi waktu kirim mengikuti layanan kurir yang kamu pilih dan dapat berubah karena kondisi di luar kendali kami. Pastikan alamat dan nomor telepon penerima sudah benar.</p>
         <h2>Perubahan ketentuan</h2>
@@ -191,7 +196,14 @@ const PAGES = {
         <h2>Ongkos kirim pengembalian</h2>
         <p>Produk cacat atau salah kirim: ongkos kirim ditanggung toko. Tukar ukuran atau berubah pikiran: ongkos kirim ditanggung pembeli.</p>
         <h2>Pengembalian dana</h2>
-        <p>Setelah produk kami terima dan periksa, dana dikembalikan ke metode pembayaran asal melalui Midtrans. Pesanan yang dibatalkan setelah dibayar juga diproses dengan cara yang sama.</p>
+        {REFUNDS_ENABLED ? (
+          <p>Setelah produk kami terima dan periksa, dana dikembalikan ke metode pembayaran asal melalui Midtrans. Pesanan yang dibatalkan setelah dibayar juga diproses dengan cara yang sama.</p>
+        ) : (
+          <>
+            <p>Saat ini pengembalian kami utamakan dalam bentuk penukaran ukuran atau produk pengganti. Pengajuan refund belum tersedia di aplikasi.</p>
+            <p>Bila penukaran tidak memungkinkan, misalnya stok pengganti habis, tim kami akan menghubungi kamu untuk mengatur pengembalian dana secara langsung.</p>
+          </>
+        )}
       </>
     ),
   },

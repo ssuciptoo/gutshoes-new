@@ -20,6 +20,9 @@ x-backend: &backend
     CORS_ALLOWED_ORIGINS: https://staging.${STAGING_DOMAIN}
     SANCTUM_STATEFUL_DOMAINS: staging.${STAGING_DOMAIN},api-staging.${STAGING_DOMAIN}
     SESSION_DOMAIN: .${STAGING_DOMAIN}
+    # Staging dan production berbagi domain induk (.gutshoes.id); nama cookie berbeda agar sesi
+    # admin di kedua lingkungan tidak saling menimpa di browser yang sama.
+    SESSION_COOKIE: gutshoes_staging_session
     CLERK_AUTHORIZED_PARTIES: https://staging.${STAGING_DOMAIN}
     # Caddy berada di jaringan internal ini; hanya proxy itu yang boleh mengirim X-Forwarded-*.
     TRUSTED_PROXIES: 172.28.0.0/16
