@@ -8,11 +8,19 @@ export function catalogImageUrl(path) {
   return `${backendBase}/storage/${String(path).replace(/^\/+/, "")}`;
 }
 
+export function formatFootLength(cm) {
+  const value = Number(cm);
+  if (!cm || !Number.isFinite(value)) return "";
+  return `${value.toLocaleString("id-ID", {maximumFractionDigits: 1})} cm`;
+}
+
 export function mapCatalogProduct(item) {
   const variants = Array.isArray(item?.variants) ? item.variants : [];
   const mappedVariants = variants.map((variant) => ({
     id: variant.id,
     size: variant.size,
+    sizeValue: variant.size_value ?? variant.size,
+    footLength: variant.foot_length_cm ? Number(variant.foot_length_cm) : null,
     sku: variant.sku,
     price: Number(variant.price),
     weight: variant.weight_grams,
@@ -44,6 +52,7 @@ export function mapCatalogProduct(item) {
     images,
     sizes: mappedVariants.map((variant) => variant.size),
     stock: Object.fromEntries(mappedVariants.map((variant) => [variant.size, variant.stock])),
+    footLength: Object.fromEntries(mappedVariants.map((variant) => [variant.size, variant.footLength])),
     variants: mappedVariants,
   };
 }

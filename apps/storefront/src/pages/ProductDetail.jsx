@@ -4,6 +4,7 @@ import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 import ProductCard from "../components/catalog/ProductCard";
+import {formatFootLength} from "../lib/catalog";
 
 import {useCatalog, useProduct} from "../lib/useCatalog";
 import {applySeo, productJsonLd} from "../lib/seo";
@@ -95,8 +96,8 @@ function ProductDetail({slug, products, addToCart, navigate}) {
           <p className="price">{rupiah(displayPrice)}</p>
           {selectedVariant && <p className="variant-meta">SKU {selectedVariant.sku} · {selectedVariant.weight} gram</p>}
           {product.description && <p className="description">{product.description}</p>}
-          <div className="size-heading"><strong id="size-picker-label">Pilih ukuran</strong></div>
-          <div className="size-picker" role="group" aria-labelledby="size-picker-label">{product.sizes.map((itemSize) => <button key={itemSize} aria-pressed={size === itemSize} className={size === itemSize ? "active" : ""} disabled={!product.stock[itemSize]} onClick={() => { setSize(itemSize); setNotice(""); setAdded(false); }}>{itemSize}<small>{!product.stock[itemSize] ? "Habis" : `${product.stock[itemSize]} stok`}</small></button>)}</div>
+          <div className="size-heading"><strong id="size-picker-label">Pilih ukuran</strong><button type="button" onClick={() => navigate("size-guide")}>Panduan ukuran</button></div>
+          <div className="size-picker" role="group" aria-labelledby="size-picker-label">{product.sizes.map((itemSize) => <button key={itemSize} aria-pressed={size === itemSize} className={size === itemSize ? "active" : ""} disabled={!product.stock[itemSize]} onClick={() => { setSize(itemSize); setNotice(""); setAdded(false); }}>{itemSize}{product.footLength?.[itemSize] ? <em className="size-cm">{formatFootLength(product.footLength[itemSize])}</em> : null}<small>{!product.stock[itemSize] ? "Habis" : `${product.stock[itemSize]} stok`}</small></button>)}</div>
           <Feedback>{notice}</Feedback>
           {added ? (
             <div className="added-to-cart" role="status">

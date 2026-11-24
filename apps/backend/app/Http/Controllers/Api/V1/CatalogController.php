@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\Size;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,6 +65,11 @@ class CatalogController extends Controller
                 'brands' => Brand::whereIn('id', Product::where('status', 'PUBLISHED')->select('brand_id'))->orderBy('name')->get(['name', 'slug']),
                 'categories' => Category::whereIn('id', DB::table('category_product')->select('category_id')
                     ->whereIn('product_id', Product::where('status', 'PUBLISHED')->select('id')))->orderBy('name')->get(['name', 'slug']),
+                // Ukuran yang dipakai produk terbit, untuk filter katalog dan tabel panduan ukuran.
+                'sizes' => Size::whereIn('id', ProductVariant::where('is_active', true)
+                    ->whereIn('product_id', Product::where('status', 'PUBLISHED')->select('id'))->select('size_id'))
+                    ->orderBy('system')->orderByRaw('sort_value is null')->orderBy('sort_value')->orderBy('value')
+                    ->get(['system', 'value', 'label', 'foot_length_cm']),
             ],
             'links' => ['first' => $products->url(1), 'last' => $products->url($products->lastPage()), 'prev' => $products->previousPageUrl(), 'next' => $products->nextPageUrl()]]);
     }
@@ -79,7 +86,8 @@ class CatalogController extends Controller
     {
         return ['slug' => $product->slug, 'name' => $product->name, 'description' => $product->description, 'brand' => ['name' => $product->brand->name, 'slug' => $product->brand->slug],
             'categories' => $product->categories->map->only(['name', 'slug'])->values(), 'images' => $product->images->map->only(['id', 'path', 'alt_text', 'is_primary'])->values(),
-            'variants' => $product->variants->map(fn ($v) => ['id' => $v->id, 'sku' => $v->sku, 'size' => $v->size->label, 'price' => (string) $v->price, 'currency' => $v->currency,
+            'variants' => $product->variants->sortBy(fn ($v) => $v->size->sort_value ?? PHP_FLOAT_MAX)
+                ->map(fn ($v) => ['id' => $v->id, 'sku' => $v->sku, 'size' => $v->size->label, 'size_value' => $v->size->value, 'foot_length_cm' => $v->size->foot_length_cm, 'price' => (string) $v->price, 'currency' => $v->currency,
                 'weight_grams' => $v->weight_grams, 'available_stock' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)), 'sold_out' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)) === 0])->values()];
     }
 }

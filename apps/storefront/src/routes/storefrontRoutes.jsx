@@ -17,10 +17,10 @@ const StoreInfo = lazy(() => import("../pages/StoreInfo"));
 const NotFound = lazy(() => import("../pages/NotFound"));
 
 // Halaman informasi toko (kontak & kebijakan) memakai satu komponen.
-const storeInfoRoutes = ["contact", "privacy", "terms", "returns"].map((page) => ({
+const storeInfoRoutes = ["size-guide", "contact", "privacy", "terms", "returns"].map((page) => ({
   page,
   path: `/${page}`,
-  render: (c) => <StoreInfo page={page} navigate={c.navigate} />,
+  render: (c) => <StoreInfo page={page} navigate={c.navigate} sizes={c.catalogFilters?.sizes || []} />,
 }));
 
 export const storefrontRoutes = [
@@ -44,11 +44,13 @@ export const storefrontRoutes = [
     path: "/catalog",
     render: (c) => (
       <Catalog
-        key={c.pageData.filter || "all"}
+        key={[c.pageData.filter, c.pageData.brand, c.pageData.sort].join("|") || "all"}
         query={c.query}
         setQuery={c.setQuery}
         openProduct={c.openProduct}
         initialFilter={c.pageData.filter}
+        initialBrand={c.pageData.brand}
+        initialSort={c.pageData.sort}
       />
     ),
   },

@@ -399,7 +399,9 @@ export default function App() {
         setQuery={setQuery}
         user={user}
         page={page}
+        pageData={pageData}
         categories={catalogFilters?.categories || []}
+        brands={catalogFilters?.brands || []}
       />
       <div id="main" className="main-focus" ref={mainRef} tabIndex="-1">
         <Suspense key={page} fallback={<RouteLoading />}>{!sessionReady && (page === "checkout" || isProtectedStorefrontRoute(page)) ? <RouteLoading /> : content}</Suspense>

@@ -6,10 +6,14 @@ import {CatalogError, CatalogLoading} from "./Home";
 import {useCatalog} from "../lib/useCatalog";
 import {applySeo} from "../lib/seo";
 
-function Catalog({query, setQuery, openProduct, initialFilter}) {
+const SORTS = ["newest", "best_selling", "price_asc", "price_desc"];
+// Dipakai sementara sebelum daftar ukuran dari API termuat.
+const FALLBACK_SIZES = ["36", "37", "38", "39", "40", "41", "42", "43", "44"].map((value) => ({value, label: value}));
+
+function Catalog({query, setQuery, openProduct, initialFilter, initialBrand, initialSort}) {
   const [category, setCategory] = useState(initialFilter || "");
-  const [brand, setBrand] = useState("");
-  const [sort, setSort] = useState("newest");
+  const [brand, setBrand] = useState(initialBrand || "");
+  const [sort, setSort] = useState(SORTS.includes(initialSort) ? initialSort : "newest");
   const [priceBand, setPriceBand] = useState("all");
   const [selectedSize, setSelectedSize] = useState(null);
   const [mobileFilters, setMobileFilters] = useState(false);
@@ -114,15 +118,15 @@ function Catalog({query, setQuery, openProduct, initialFilter}) {
       <fieldset>
         <legend>Ukuran tersedia</legend>
         <div className="size-filter">
-          {[36, 37, 38, 39, 40, 41, 42, 43, 44].map((s) => (
+          {(options?.sizes?.length ? options.sizes : FALLBACK_SIZES).map(({value, label}) => (
             <button
               type="button"
-              aria-pressed={selectedSize === s}
-              className={selectedSize === s ? "active" : ""}
-              onClick={() => setSelectedSize(selectedSize === s ? null : s)}
-              key={s}
+              aria-pressed={selectedSize === value}
+              className={selectedSize === value ? "active" : ""}
+              onClick={() => setSelectedSize(selectedSize === value ? null : value)}
+              key={value}
             >
-              {s}
+              {label}
             </button>
           ))}
         </div>

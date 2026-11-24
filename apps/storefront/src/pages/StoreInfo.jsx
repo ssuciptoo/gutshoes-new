@@ -1,9 +1,10 @@
 import React from "react";
 import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
+import {formatFootLength} from "../lib/catalog";
 import {formatPolicyDate, returnDays, useStoreInfo, whatsappUrl} from "../lib/storeInfo";
 
-// Halaman informasi toko: kontak, kebijakan privasi, syarat & ketentuan, dan pengembalian.
+// Halaman informasi toko: panduan ukuran, kontak, kebijakan privasi, syarat & ketentuan, dan pengembalian.
 // Data toko dikelola admin (Pengaturan). Isi kebijakan adalah draf umum; lihat lib/storeInfo.jsx.
 
 function ContactLines({info}) {
@@ -45,7 +46,78 @@ const operator = (info) => info.legal_name || "GutShoes";
 const contactPhrase = (info) =>
   info.email ? `email ${info.email}` : info.whatsapp ? `WhatsApp ${info.whatsapp}` : "halaman Kontak";
 
+// Estimasi konversi umum. Ukuran tiap merek dan model bisa berbeda ±0,5 cm.
+const SIZE_CHART = [
+  ["36", "22,5", "3,5", "4,5"],
+  ["37", "23,5", "4", "5"],
+  ["38", "24", "5", "6"],
+  ["39", "24,5", "6", "7"],
+  ["40", "25", "6,5", "7,5"],
+  ["41", "26", "7,5", "8,5"],
+  ["42", "26,5", "8", "9"],
+  ["43", "27,5", "9", "10"],
+  ["44", "28", "9,5", "10,5"],
+];
+
 const PAGES = {
+  "size-guide": {
+    title: "Panduan ukuran",
+    intro: "Ukur kakimu dalam 5 menit, lalu cocokkan dengan tabel di bawah agar sepatu pas sejak pertama dipakai.",
+    body: (info, navigate, sizes) => (
+      <>
+        <h2>Cara mengukur panjang kaki</h2>
+        <ol className="size-steps">
+          <li><strong>Siapkan kertas dan pensil.</strong> Letakkan kertas di lantai rata, rapat ke dinding.</li>
+          <li><strong>Berdiri di atas kertas.</strong> Tumit menempel ke dinding, pakai kaus kaki yang biasa kamu pakai olahraga.</li>
+          <li><strong>Tandai ujung jari terpanjang.</strong> Minta bantuan orang lain agar pensil tetap tegak lurus.</li>
+          <li><strong>Ukur jarak dinding ke tanda.</strong> Itulah panjang kakimu dalam cm. Ulangi untuk kaki satunya dan pakai angka yang lebih panjang.</li>
+        </ol>
+        <p className="size-tip">Ukur di sore atau malam hari. Kaki sedikit membesar setelah beraktivitas seharian, jadi hasilnya lebih mendekati kondisi saat berolahraga.</p>
+        {sizes.some((size) => size.foot_length_cm) && (
+          <>
+            <h2>Ukuran di GutShoes</h2>
+            <p>Cocokkan panjang kakimu dengan ukuran yang tersedia di toko kami. Pilih ukuran dengan panjang yang sama atau sedikit lebih besar.</p>
+            <div className="size-table-wrap" tabIndex="0" role="region" aria-label="Tabel ukuran GutShoes">
+              <table className="size-table">
+                <thead>
+                  <tr><th scope="col">Ukuran</th><th scope="col">Panjang kaki</th></tr>
+                </thead>
+                <tbody>
+                  {sizes.filter((size) => size.foot_length_cm).map((size) => (
+                    <tr key={`${size.system}-${size.value}`}><th scope="row">{size.label}</th><td>{formatFootLength(size.foot_length_cm)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+        <h2>{sizes.some((size) => size.foot_length_cm) ? "Konversi umum EU, UK, US" : "Tabel ukuran dewasa"}</h2>
+        <div className="size-table-wrap" tabIndex="0" role="region" aria-label="Tabel konversi ukuran sepatu">
+          <table className="size-table">
+            <thead>
+              <tr><th scope="col">EU</th><th scope="col">Panjang kaki (cm)</th><th scope="col">UK</th><th scope="col">US</th></tr>
+            </thead>
+            <tbody>
+              {SIZE_CHART.map(([eu, cm, uk, us]) => (
+                <tr key={eu}><th scope="row">{eu}</th><td>{cm}</td><td>{uk}</td><td>{us}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="size-note">Angka di atas adalah estimasi umum. Ukuran di halaman produk mengikuti label resmi tiap merek, termasuk ukuran pecahan seperti 41⅓ atau 42½.</p>
+        <h2>Tips memilih sesuai aktivitas</h2>
+        <ul>
+          <li><strong>Lari:</strong> sisakan ruang sekitar satu jari (±1 cm) di depan jari terpanjang. Kaki memuai saat berlari jarak jauh.</li>
+          <li><strong>Futsal:</strong> pilih yang lebih pas di kaki agar kontrol bola tetap baik, tapi jari tidak boleh tertekuk.</li>
+          <li><strong>Basket & training:</strong> utamakan tumit yang terkunci dan tidak bergeser saat melompat atau bergerak ke samping.</li>
+          <li><strong>Kasual:</strong> pilih ukuran yang nyaman untuk dipakai seharian, sisakan ruang ±0,5–1 cm.</li>
+          <li><strong>Anak:</strong> sisakan ruang ±1–1,5 cm untuk pertumbuhan, dan ukur ulang kaki anak setiap 3–4 bulan.</li>
+        </ul>
+        <h2>Ukuran di antara dua angka?</h2>
+        <p>Pilih ukuran yang lebih besar, terutama bila kakimu lebar atau kamu memakai kaus kaki tebal. Bila setelah dicoba tetap kurang pas, kamu bisa menukar ukuran dalam {returnDays(info)} hari sesuai <button type="button" className="inline-link" onClick={() => navigate("returns")}>ketentuan pengembalian</button>.</p>
+      </>
+    ),
+  },
   contact: {
     title: "Hubungi kami",
     intro: "Ada pertanyaan soal ukuran, pesanan, atau pengembalian? Tim kami siap membantu.",
@@ -127,7 +199,7 @@ const PAGES = {
 
 export const STORE_INFO_PAGES = Object.keys(PAGES);
 
-function StoreInfo({page, navigate}) {
+function StoreInfo({page, navigate, sizes = []}) {
   const info = useStoreInfo();
   const content = PAGES[page] || PAGES.contact;
   const intro = typeof content.intro === "function" ? content.intro(info) : content.intro;
@@ -138,8 +210,8 @@ function StoreInfo({page, navigate}) {
       </button>
       <h1>{content.title}</h1>
       <p className="info-intro">{intro}</p>
-      <article className="info-body">{content.body(info)}</article>
-      {info.policy_updated && page !== "contact" && (
+      <article className="info-body">{content.body(info, navigate, sizes)}</article>
+      {info.policy_updated && page !== "contact" && page !== "size-guide" && (
         <p className="info-updated">Terakhir diperbarui: {formatPolicyDate(info.policy_updated)}</p>
       )}
       {page !== "contact" && (

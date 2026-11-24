@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class SitemapController extends Controller
 {
     /** Halaman statis yang boleh diindeks (lihat INDEXABLE_PAGES di storefront). */
-    private const PAGES = ['/', '/catalog', '/tracking', '/contact', '/returns', '/terms', '/privacy'];
+    private const PAGES = ['/', '/catalog', '/tracking', '/contact', '/returns', '/size-guide', '/terms', '/privacy'];
 
     public function __invoke(): Response
     {

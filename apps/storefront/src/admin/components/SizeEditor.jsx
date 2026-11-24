@@ -12,6 +12,8 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
     system: size?.system || "EU",
     value: size?.value || "",
     label: size?.label || "",
+    foot_length_cm: size?.foot_length_cm ?? "",
+    sort_value: size?.sort_value ?? "",
   });
   const [labelEdited, setLabelEdited] = useState(Boolean(size?.id));
   const [saving, setSaving] = useState(false);
@@ -38,6 +40,8 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
       system: form.system.trim().toUpperCase(),
       value: form.value.trim(),
       label: form.label.trim(),
+      foot_length_cm: form.foot_length_cm === "" ? null : Number(String(form.foot_length_cm).replace(",", ".")),
+      sort_value: form.sort_value === "" ? null : Number(String(form.sort_value).replace(",", ".")),
     };
     try {
       const response = form.id
@@ -157,7 +161,37 @@ function SizeEditor({size, onClose, onSaved, onDeleted}) {
                 }}
                 placeholder="EU 42"
               />
-              <small>Contoh: EU 42, UK 8.5, atau 27 CM.</small>
+              <small>Ikuti label di kotak sepatu. Contoh: 42, 42½, atau 41⅓.</small>
+            </label>
+            <label>
+              Panjang kaki
+              <span className="adm-stock-number">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min="8"
+                  max="40"
+                  step="0.1"
+                  value={form.foot_length_cm}
+                  onChange={(event) => setForm((previous) => ({...previous, foot_length_cm: event.target.value}))}
+                  placeholder="26.5"
+                />
+                <b>cm</b>
+              </span>
+              <small>Tampil di tombol ukuran dan halaman Panduan ukuran.</small>
+            </label>
+            <label>
+              Nilai urut
+              <input
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="0.01"
+                value={form.sort_value}
+                onChange={(event) => setForm((previous) => ({...previous, sort_value: event.target.value}))}
+                placeholder="Otomatis"
+              />
+              <small>Kosongkan agar dihitung dari nilai (41 1/3 → 41.33).</small>
             </label>
           </div>
           {form.id && usageCount > 0 && (

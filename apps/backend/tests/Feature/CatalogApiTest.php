@@ -75,6 +75,29 @@ it('lets an admin manage master sizes and protects sizes used by product variant
     $this->assertSoftDeleted('sizes', ['id' => $unused->id]);
 });
 
+it('stores foot length and orders fractional sizes numerically', function () {
+    $admin = User::factory()->admin()->create();
+    foreach (['42', '41 1/3', '41'] as $value) {
+        $this->actingAs($admin)->postJson('/api/v1/admin/sizes', ['system' => 'EU', 'value' => $value, 'label' => $value, 'foot_length_cm' => 26.0])->assertCreated();
+    }
+    $this->actingAs($admin)->postJson('/api/v1/admin/sizes', ['system' => 'EU', 'value' => '43', 'label' => '43', 'foot_length_cm' => 99])
+        ->assertUnprocessable()->assertJsonValidationErrors('foot_length_cm');
+
+    $sizes = $this->actingAs($admin)->getJson('/api/v1/admin/sizes')->assertOk()->json('data');
+    expect(collect($sizes)->pluck('value')->all())->toBe(['41', '41 1/3', '42'])
+        ->and($sizes[1]['sort_value'])->toBe(41.33)
+        ->and($sizes[1]['foot_length_cm'])->toEqual(26.0);
+
+    $product = Product::factory()->create(['status' => 'PUBLISHED', 'published_at' => now()]);
+    foreach (Size::all() as $size) {
+        ProductVariant::factory()->create(['product_id' => $product->id, 'size_id' => $size->id, 'is_active' => true]);
+    }
+    $response = $this->getJson('/api/v1/products/'.$product->slug)->assertOk();
+    expect(collect($response->json('data.variants'))->pluck('size_value')->all())->toBe(['41', '41 1/3', '42'])
+        ->and($response->json('data.variants.1.foot_length_cm'))->toEqual(26.0);
+    expect(collect($this->getJson('/api/v1/products')->json('filters.sizes'))->pluck('value')->all())->toBe(['41', '41 1/3', '42']);
+});
+
 it('allows an admin to create and publish a complete product', function () {
     $admin = User::factory()->admin()->create();
     $brand = Brand::factory()->create();

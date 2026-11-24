@@ -29,6 +29,7 @@ function Footer() {
       <div>
         <strong>Bantuan</strong>
         <a href="/tracking">Lacak pesanan</a>
+        <a href="/size-guide">Panduan ukuran</a>
         <a href="/returns">Pengembalian & refund</a>
         <a href="/contact">Hubungi kami</a>
         <a href="/guest-orders">Pesanan tanpa akun</a>

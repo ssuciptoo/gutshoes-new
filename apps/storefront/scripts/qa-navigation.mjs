@@ -23,7 +23,7 @@ try {
         await new Promise((resolve, reject) => {
           const deadline = setTimeout(() => reject(new Error('Navigation exceeded 1500 ms')), 1500);
           const check = () => {
-            if (location.pathname === expected && document.querySelector('.nav [aria-current="page"]')?.textContent.trim() === (i % 2 ? 'Beranda' : 'Semua sepatu')) {
+            if (location.pathname === expected && document.querySelector('.nav [aria-current="page"]')?.textContent.trim() === (i % 2 ? 'Beranda' : 'Katalog')) {
               clearTimeout(deadline);
               resolve();
             } else requestAnimationFrame(check);

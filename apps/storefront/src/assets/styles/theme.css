@@ -81,3 +81,45 @@ footer img,
 .admin-login form img {
   height: auto;
 }
+
+/* Navbar storefront: Beranda · Katalog · Kategori ▾ · Merek ▾ · Bantuan ▾ · Terlaris */
+.nav .nav-menu{height:100%;display:flex}
+.nav .nav-menu__trigger{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.nav .nav-menu__trigger svg{transition:transform .15s ease;color:var(--muted,#64747d)}
+.nav .nav-menu__trigger[aria-expanded="true"]{color:var(--cyan-dark)}
+.nav .nav-menu__trigger[aria-expanded="true"] svg{transform:rotate(180deg);color:currentColor}
+.nav-panel{position:fixed;z-index:50;width:240px;max-height:min(70vh,420px);overflow-y:auto;margin-top:6px;padding:6px;display:grid;gap:2px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(10,30,40,.14);animation:navPanelIn .14s ease}
+.nav .nav-panel button{height:auto;min-height:42px;padding:0 12px;border-radius:8px;text-align:left;font-weight:500;color:inherit;white-space:nowrap}
+.nav .nav-panel button::after{display:none!important}
+.nav .nav-panel button:hover,.nav .nav-panel button:focus-visible{background:#eef8fb;color:var(--cyan-dark)}
+.nav .nav-panel button.current{background:#e5f5fa;color:var(--cyan-dark);font-weight:700}
+@keyframes navPanelIn{from{opacity:0;transform:translateY(-4px)}}
+@media(max-width:760px){
+  .nav>button:nth-child(n+5){display:inline-flex;align-items:center}
+  .nav{scrollbar-width:none}
+  .nav::-webkit-scrollbar{display:none}
+  .nav-panel{left:12px!important;right:12px;width:auto}
+}
+@media(prefers-reduced-motion:reduce){.nav-panel{animation:none}.nav .nav-menu__trigger svg{transition:none}}
+
+/* Halaman panduan ukuran */
+.size-steps{list-style:none;counter-reset:step;padding:0!important;display:grid;gap:.75rem;margin:0 0 1rem}
+.size-steps li{counter-increment:step;position:relative;padding:.9rem 1rem .9rem 3.4rem;border:1px solid var(--line);border-radius:12px;margin:0!important}
+.size-steps li::before{content:counter(step);position:absolute;left:1rem;top:.9rem;width:1.6rem;height:1.6rem;border-radius:50%;display:grid;place-items:center;background:var(--cyan-dark);color:#fff;font-size:.8rem;font-weight:800;line-height:1}
+.size-steps strong{display:block}
+.size-tip{padding:.9rem 1rem;border-radius:12px;background:var(--soft);font-size:.92rem}
+.size-table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+.size-table-wrap:focus-visible{outline:3px solid var(--cyan);outline-offset:2px}
+.size-table{width:100%;min-width:420px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.size-table th,.size-table td{padding:.7rem 1rem;text-align:left;border-bottom:1px solid var(--line)}
+.size-table thead th{background:var(--soft);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.size-table tbody th{font-weight:800}
+.size-table tbody tr:last-child>*{border-bottom:0}
+.size-table tbody tr:hover{background:#f6fbfd}
+.size-note{color:var(--muted);font-size:.85rem;margin-top:.6rem!important}
+.inline-link{border:0;background:none;padding:0;font:inherit;color:var(--action-on-soft,var(--cyan-dark));font-weight:700;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+
+/* Panjang kaki (cm) di tombol ukuran halaman produk */
+.size-picker button .size-cm{display:block;font-style:normal;font-size:.68rem;font-weight:600;color:var(--cyan-dark);margin-top:.1rem;font-variant-numeric:tabular-nums}
+.size-picker button.active .size-cm{color:#9fe3f5}
+.size-picker button:disabled .size-cm{color:inherit}

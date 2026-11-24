@@ -32,8 +32,10 @@ class CatalogDemoSeeder extends Seeder
 
         Product::query()->where('status', 'PUBLISHED')->whereDoesntHave('images')->whereNotIn('slug', collect($catalog)->pluck('slug'))->update(['status' => 'ARCHIVED', 'published_at' => null]);
 
-        $sizes = collect(range(36, 44))->mapWithKeys(fn (int $value) => [
-            $value => Size::firstOrCreate(['system' => 'EU', 'value' => (string) $value], ['label' => (string) $value]),
+        // Panjang kaki (cm) estimasi umum untuk ukuran EU dewasa; admin dapat menyesuaikan per ukuran.
+        $footLengths = [36 => 22.5, 37 => 23.5, 38 => 24.0, 39 => 24.5, 40 => 25.0, 41 => 26.0, 42 => 26.5, 43 => 27.5, 44 => 28.0];
+        $sizes = collect($footLengths)->mapWithKeys(fn (float $cm, int $value) => [
+            $value => Size::firstOrCreate(['system' => 'EU', 'value' => (string) $value], ['label' => (string) $value, 'foot_length_cm' => $cm, 'sort_value' => $value]),
         ]);
 
         foreach ($catalog as $index => $item) {

@@ -77,6 +77,7 @@ function SizesPage() {
                     <th>Ukuran</th>
                     <th>Sistem</th>
                     <th>Nilai</th>
+                    <th>Panjang kaki</th>
                     <th>Penggunaan</th>
                     <th>
                       <span className="sr-only">Aksi</span>
@@ -98,6 +99,9 @@ function SizesPage() {
                           <Badge tone="info">{item.system}</Badge>
                         </td>
                         <td className="num adm-size-value">{item.value}</td>
+                        <td className="num">
+                          {item.foot_length_cm ? `${Number(item.foot_length_cm).toLocaleString("id-ID")} cm` : <span className="adm-unused">Belum diisi</span>}
+                        </td>
                         <td>
                           {usageCount ? (
                             <span>{usageCount} varian produk</span>

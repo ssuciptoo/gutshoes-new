@@ -16,6 +16,7 @@ const STOREFRONT_PAGES = new Set([
   "privacy",
   "terms",
   "returns",
+  "size-guide",
 ]);
 
 const ADMIN_SECTIONS = new Set([
@@ -45,6 +46,7 @@ const STOREFRONT_TITLES = {
   privacy: "Kebijakan privasi",
   terms: "Syarat & ketentuan",
   returns: "Pengembalian & refund",
+  "size-guide": "Panduan ukuran sepatu",
   login: "Masuk ke akun",
   profile: "Profil saya",
   addresses: "Alamat saya",
@@ -97,7 +99,15 @@ function routeFromParts(segments, search) {
   }
   if (first === "product") return parameter ? {page: "product", data: {slug: parameter}} : {page: "catalog", data: {}};
   if (first === "catalog") {
-    return {page: "catalog", data: {filter: new URLSearchParams(search).get("filter") || undefined}};
+    const params = new URLSearchParams(search);
+    return {
+      page: "catalog",
+      data: {
+        filter: params.get("filter") || undefined,
+        brand: params.get("brand") || undefined,
+        sort: params.get("sort") || undefined,
+      },
+    };
   }
   if (segments.length === 1 && STOREFRONT_PAGES.has(first)) return {page: first, data: {}};
   return {page: "not-found", data: {}};
@@ -122,8 +132,12 @@ export function routeUrl(page, data = {}) {
     const slug = data.product?.slug || data.product?.id || data.slug || "";
     return `/product/${encodeURIComponent(slug)}`;
   }
-  if (page === "catalog" && data.filter) {
-    return `/catalog?filter=${encodeURIComponent(data.filter)}`;
+  if (page === "catalog") {
+    // Kategori, merek, dan urutan dari navbar: /catalog?filter=lari, ?brand=aerorun, ?sort=best_selling
+    const query = new URLSearchParams(
+      ["filter", "brand", "sort"].filter((key) => data[key]).map((key) => [key, data[key]]),
+    ).toString();
+    return `/catalog${query ? `?${query}` : ""}`;
   }
   if (page === "order-detail") {
     return `/orders/${encodeURIComponent(data.orderNumber || "")}`;
@@ -169,7 +183,7 @@ export function routeTitle(route, productName = "") {
 
 // Halaman publik yang boleh diindeks mesin pencari. Halaman lain (keranjang, checkout,
 // akun, pesanan, admin, halaman tidak ditemukan) diberi noindex.
-const INDEXABLE_PAGES = new Set(["home", "catalog", "product", "tracking", "contact", "privacy", "terms", "returns"]);
+const INDEXABLE_PAGES = new Set(["home", "catalog", "product", "tracking", "contact", "privacy", "terms", "returns", "size-guide"]);
 
 const STOREFRONT_DESCRIPTIONS = {
   home: "Belanja sepatu olahraga untuk lari, training, basket, futsal, dan anak di GutShoes. Pilih ukuran, cek stok, ongkir dihitung otomatis sebelum membayar.",
@@ -178,6 +192,7 @@ const STOREFRONT_DESCRIPTIONS = {
   contact: "Hubungi layanan pelanggan GutShoes untuk pertanyaan produk, pesanan, pengiriman, dan pengembalian.",
   privacy: "Kebijakan privasi GutShoes: data apa yang kami kumpulkan, untuk apa dipakai, dan bagaimana kami melindunginya.",
   terms: "Syarat dan ketentuan berbelanja di GutShoes, termasuk pemesanan, pembayaran, dan pengiriman.",
+  "size-guide": "Cara mengukur panjang kaki dan tabel konversi ukuran sepatu EU, UK, US, dan cm, plus tips memilih ukuran untuk lari, futsal, basket, dan anak.",
   returns: "Ketentuan pengembalian barang dan refund di GutShoes: syarat, batas waktu, dan cara mengajukan.",
 };
 
