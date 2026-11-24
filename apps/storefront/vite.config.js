@@ -1,5 +1,7 @@
 import {defineConfig, loadEnv} from "vite";
 import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "node:path";
 
 // Deployed bundles must never fall back to the localhost API default in src/api.js.
 const deployedModes = new Set(["staging", "production"]);
@@ -71,8 +73,41 @@ export default defineConfig(({command, mode}) => {
   // Dev: sitemap dibuat backend (GET /api/v1/sitemap.xml); production diteruskan oleh nginx.
   const apiOrigin = (env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
 
+  // Dev: gambar produk (/storage/...) disajikan langsung oleh Vite dari folder storage backend.
+  // Server PHP bawaan (php artisan serve) di Windows hanya melayani satu request sekaligus dan
+  // memutus koneksi saat banyak gambar diminta bersamaan, sehingga gambar katalog hilang/terpotong.
+  const storageDir = path.resolve(env.VITE_DEV_STORAGE_DIR || "../backend/storage/app/public");
+  const serveLocalStorage = command === "serve" && fs.existsSync(storageDir);
+  const storageTypes = {".webp": "image/webp", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".avif": "image/avif"};
+  const devStoragePlugin = {
+    name: "gutshoes-dev-storage",
+    configureServer(server) {
+      if (!serveLocalStorage) return;
+      server.middlewares.use("/storage", (request, response, next) => {
+        let relative;
+        try {
+          relative = decodeURIComponent(new URL(request.url, "http://local").pathname);
+        } catch {
+          return next();
+        }
+        const file = path.join(storageDir, relative);
+        const type = storageTypes[path.extname(file).toLowerCase()];
+        // Tolak path di luar folder storage (../) dan tipe file selain gambar.
+        if (!type || !file.startsWith(storageDir + path.sep)) return next();
+        fs.stat(file, (error, stat) => {
+          if (error || !stat.isFile()) return next();
+          response.setHeader("Content-Type", type);
+          response.setHeader("Content-Length", stat.size);
+          response.setHeader("Cache-Control", "no-cache");
+          fs.createReadStream(file).pipe(response);
+        });
+      });
+    },
+  };
+
   return {
-    plugins: [react(), siteUrlPlugin],
+    plugins: [react(), siteUrlPlugin, devStoragePlugin],
+    define: {"import.meta.env.VITE_DEV_LOCAL_STORAGE": JSON.stringify(serveLocalStorage ? "1" : "")},
     server: {proxy: {"/sitemap.xml": {target: apiOrigin, changeOrigin: true, rewrite: () => "/api/v1/sitemap.xml"}}},
   };
 });

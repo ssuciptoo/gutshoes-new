@@ -1,6 +1,7 @@
 import {backendBaseUrl} from "../api";
 
-const backendBase = backendBaseUrl;
+// Saat dev dengan backend lokal, gambar disajikan Vite dari origin yang sama (lihat vite.config.js).
+const backendBase = import.meta.env.VITE_DEV_LOCAL_STORAGE ? "" : backendBaseUrl;
 
 export function catalogImageUrl(path) {
   if (!path) return "";

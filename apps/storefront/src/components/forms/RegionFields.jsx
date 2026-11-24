@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from "react";
 import {api} from "../../api";
 import SearchableCombobox from "./SearchableCombobox";
+import Select from "../ui/Select";
 
 function RegionFields({initial = {}, searchable = false, invalidFields = [], errorId}) {
   const [lists, setLists] = useState({
@@ -69,7 +70,7 @@ function RegionFields({initial = {}, searchable = false, invalidFields = [], err
     return (
       <label>
         {label}
-        <select
+        <Select
           name={name}
           required
           value={value[key]}
@@ -86,7 +87,7 @@ function RegionFields({initial = {}, searchable = false, invalidFields = [], err
               {x.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
     );
   };

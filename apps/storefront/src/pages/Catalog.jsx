@@ -5,6 +5,7 @@ import Icon from "../components/ui/Icon";
 import {CatalogError, CatalogLoading} from "./Home";
 import {useCatalog} from "../lib/useCatalog";
 import {applySeo} from "../lib/seo";
+import Select from "../components/ui/Select";
 
 const SORTS = ["newest", "best_selling", "price_asc", "price_desc"];
 // Dipakai sementara sebelum daftar ukuran dari API termuat.
@@ -172,12 +173,12 @@ function Catalog({query, setQuery, openProduct, initialFilter, initialBrand, ini
           </Button>
           <label>
             Urutkan{" "}
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+            <Select value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="newest">Terbaru</option>
               <option value="best_selling">Terlaris</option>
               <option value="price_asc">Harga terendah</option>
               <option value="price_desc">Harga tertinggi</option>
-            </select>
+            </Select>
           </label>
         </div>
       </div>

@@ -12,6 +12,7 @@ import Pagination from "../components/Pagination";
 import ResourceState from "../components/ResourceState";
 import useDialogFocus from "../hooks/useDialogFocus";
 import useUnsavedGuard from "../hooks/useUnsavedGuard";
+import Select from "../../components/ui/Select";
 
 // Drawer editor stok: Esc/klik luar menutup, fokus dikunci, perubahan belum tersimpan dikonfirmasi.
 function StockDrawer({dirty, onClose, children}) {
@@ -210,8 +211,8 @@ function InventoryPage() {
                     </div>
                     {optionsError && <div className="adm-feedback error" role="alert">{optionsError}</div>}
                     <div className="adm-stock-fields">
-                      <label><span>Gudang</span><select required disabled={optionsLoading} value={form.warehouse_id} onChange={(event) => setForm({...form, warehouse_id: event.target.value})}><option value="">{optionsLoading ? "Memuat gudang…" : "Pilih gudang"}</option>{options.warehouses.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</select><small>Lokasi fisik tempat stok disimpan.</small></label>
-                      <label><span>Produk dan ukuran</span><select required disabled={optionsLoading} value={form.product_variant_id} onChange={(event) => setForm({...form, product_variant_id: event.target.value})}><option value="">{optionsLoading ? "Memuat varian…" : "Pilih produk dan ukuran"}</option>{options.variants.map((item) => <option key={item.id} value={item.id}>{item.product?.name} · Ukuran {item.size?.label || item.size?.value} · {item.sku}</option>)}</select><small>Setiap varian hanya dapat didaftarkan satu kali per gudang.</small></label>
+                      <label><span>Gudang</span><Select required disabled={optionsLoading} value={form.warehouse_id} onChange={(event) => setForm({...form, warehouse_id: event.target.value})}><option value="">{optionsLoading ? "Memuat gudang…" : "Pilih gudang"}</option>{options.warehouses.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.code}</option>)}</Select><small>Lokasi fisik tempat stok disimpan.</small></label>
+                      <label><span>Produk dan ukuran</span><Select required disabled={optionsLoading} value={form.product_variant_id} onChange={(event) => setForm({...form, product_variant_id: event.target.value})}><option value="">{optionsLoading ? "Memuat varian…" : "Pilih produk dan ukuran"}</option>{options.variants.map((item) => <option key={item.id} value={item.id}>{item.product?.name} · Ukuran {item.size?.label || item.size?.value} · {item.sku}</option>)}</Select><small>Setiap varian hanya dapat didaftarkan satu kali per gudang.</small></label>
                     </div>
                     {(selectedWarehouse || selectedVariant) && (
                       <div className="adm-stock-selection" aria-live="polite">

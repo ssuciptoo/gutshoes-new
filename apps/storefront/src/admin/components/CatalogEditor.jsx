@@ -5,6 +5,7 @@ import useDialogFocus from "../hooks/useDialogFocus";
 import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
+import Select from "../../components/ui/Select";
 
 function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
   const isCategory = kind === "category";
@@ -147,7 +148,7 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
             {isCategory && (
               <label className="wide">
                 Kategori induk
-                <select
+                <Select
                   value={form.parent_id}
                   onChange={(event) => update("parent_id", event.target.value)}
                 >
@@ -159,7 +160,7 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
                         {category.name}
                       </option>
                     ))}
-                </select>
+                </Select>
               </label>
             )}
             <label className="wide">

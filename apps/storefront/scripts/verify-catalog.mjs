@@ -44,6 +44,16 @@ page.on('request', async request => {
 });
 const ready = () => page.waitForFunction(() => document.querySelector('[aria-label="Hasil katalog"]')?.getAttribute('aria-busy') === 'false');
 const names = () => page.$$eval('.product-grid--catalog h3', nodes => nodes.map(n => n.textContent));
+// Select urutan memakai komponen Select (Radix): buka trigger, lalu klik opsi berdasarkan label.
+const chooseSort = async (label) => {
+  await page.click('.catalog-actions .ui-select-trigger');
+  await page.waitForSelector('.ui-select-content [role="option"]');
+  const options = await page.$$('.ui-select-content [role="option"]');
+  for (const option of options) {
+    if ((await option.evaluate(n => n.textContent.trim())) === label) { await option.click(); return; }
+  }
+  assert.fail(`Sort option not found: ${label}`);
+};
 const clickText = async (selector, text) => {
   const clicked = await page.$$eval(selector, (nodes, label) => {
     const node = nodes.find(n => n.textContent.trim() === label);
@@ -81,13 +91,13 @@ try {
   assert.equal(await page.$$eval('input[name="brand"]', nodes => nodes.length), catalog.filters.brands.length + 1);
   console.log('PASS server SKU search, reset and brand filtering');
 
-  await page.select('.catalog-actions select', 'best_selling');
+  await chooseSort('Terlaris');
   const ranked = await fetch(`${api}/products?brand=${target.brand.slug}&sort=best_selling`).then(r => r.json());
   await expectNames(ranked.data.map(p => p.name));
   assert(requests.some(url => new URL(url).searchParams.get('sort') === 'best_selling'));
   await clickText('button', 'Reset semua filter');
   await ready();
-  await page.select('.catalog-actions select', 'newest');
+  await chooseSort('Terbaru');
   await expectNames(catalog.data.slice(0, 12).map(p => p.name));
   console.log('PASS server best-selling sort');
 
@@ -159,7 +169,7 @@ try {
   await page.screenshot({path: path.join(output, 'desktop.png'), fullPage: true});
   await page.setViewport({width: 390, height: 844, isMobile: true, hasTouch: true});
   await expectNames(catalog.data.slice(0, 12).map(p => p.name));
-  assert(await page.$eval('.catalog-actions select', el => el.getBoundingClientRect().width > 0));
+  assert(await page.$eval('.catalog-actions .ui-select-trigger', el => el.getBoundingClientRect().width > 0));
   await clickText('button', 'Filter');
   await page.waitForSelector('.filter-drawer.open');
   await clickText('.filters label', target.brand.name);

@@ -1,5 +1,6 @@
 import React from "react";
 import Icon from "./Icon";
+import Select from "../../components/ui/Select";
 
 function DataToolbar({
   query,
@@ -22,7 +23,7 @@ function DataToolbar({
           aria-label={searchLabel}
         />
       </label>
-      <select
+      <Select
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
         aria-label={filterLabel}
@@ -35,7 +36,7 @@ function DataToolbar({
             </option>
           );
         })}
-      </select>
+      </Select>
     </div>
   );
 }

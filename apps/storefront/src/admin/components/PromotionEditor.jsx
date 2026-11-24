@@ -5,6 +5,7 @@ import useDialogFocus from "../hooks/useDialogFocus";
 import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
+import Select from "../../components/ui/Select";
 
 // "2026-11-23T10:00:00.000000Z" → "2026-11-23T17:00" (zona waktu lokal untuk input datetime-local)
 const toLocalInput = (value) => {
@@ -178,11 +179,11 @@ function PromotionEditor({kind, item, onClose, onSaved}) {
             </label>
             <label>
               Jenis potongan
-              <select value={form.type} onChange={(event) => update("type", event.target.value)}>
+              <Select value={form.type} onChange={(event) => update("type", event.target.value)}>
                 {types.map(([value, text]) => (
                   <option key={value} value={value}>{text}</option>
                 ))}
-              </select>
+              </Select>
             </label>
             {form.type !== "FREE_SHIPPING" && (
               <label>

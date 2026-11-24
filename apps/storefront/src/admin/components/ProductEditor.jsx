@@ -9,6 +9,7 @@ import {catalogImageUrl} from "../../lib/catalog";
 import Badge from "./Badge";
 import Button from "./Button";
 import Icon from "./Icon";
+import Select from "../../components/ui/Select";
 
 function ProductEditor({
   product,
@@ -366,7 +367,7 @@ function ProductEditor({
             </label>
             <label>
               Merek
-              <select
+              <Select
                 required
                 value={form.brand_id}
                 onChange={(event) => update("brand_id", event.target.value)}
@@ -377,11 +378,11 @@ function ProductEditor({
                     {brand.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
             <label>
               Status
-              <select
+              <Select
                 value={form.status}
                 onChange={(event) => update("status", event.target.value)}
               >
@@ -390,7 +391,7 @@ function ProductEditor({
                   <option value="PUBLISHED">Dipublikasikan</option>
                 )}
                 <option value="ARCHIVED">Diarsipkan</option>
-              </select>
+              </Select>
             </label>
             <label className="wide">
               Deskripsi
@@ -465,7 +466,7 @@ function ProductEditor({
               <div className="adm-variant-row" key={variant.id || index}>
                 <label>
                   Ukuran
-                  <select
+                  <Select
                     required
                     value={variant.size_id}
                     onChange={(event) =>
@@ -486,7 +487,7 @@ function ProductEditor({
                         {size.label || size.value} ({size.system})
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </label>
                 <label>
                   SKU

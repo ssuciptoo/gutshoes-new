@@ -123,3 +123,32 @@ footer img,
 .size-picker button .size-cm{display:block;font-style:normal;font-size:.68rem;font-weight:600;color:var(--cyan-dark);margin-top:.1rem;font-variant-numeric:tabular-nums}
 .size-picker button.active .size-cm{color:#9fe3f5}
 .size-picker button:disabled .size-cm{color:inherit}
+
+/* Komponen Select (components/ui/Select.jsx): pengganti <select> di storefront dan admin.
+   Daftar pilihan dirender di portal, lebarnya mengikuti trigger dan selalu dibatasi lebar layar. */
+.ui-select-trigger{width:100%;min-width:0;min-height:44px;padding:0 .8rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem;border:1px solid var(--border-control);border-radius:9px;background:var(--white);color:var(--ink);font:inherit;text-align:left;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease}
+.ui-select-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ui-select-trigger[data-placeholder] .ui-select-value{color:var(--muted)}
+.ui-select-icon{flex:0 0 auto;display:grid;place-items:center;color:#64747d;transition:transform .15s ease}
+.ui-select-trigger[data-state=open] .ui-select-icon{transform:rotate(180deg);color:var(--cyan-dark)}
+.ui-select-trigger:hover:not(:disabled){border-color:var(--border-control-strong,#9fb0b8)}
+.ui-select-trigger:focus-visible,.ui-select-trigger[data-state=open]{outline:0;border-color:var(--cyan-dark);box-shadow:0 0 0 3px rgba(18,148,180,.16)}
+.ui-select-trigger:disabled{cursor:not-allowed;background:var(--soft);color:var(--muted)}
+.ui-select-trigger[aria-invalid=true]{border-color:var(--danger)}
+.ui-select-content{z-index:300;min-width:var(--radix-select-trigger-width);max-width:min(calc(100vw - 24px),max(var(--radix-select-trigger-width),360px));max-height:min(340px,var(--radix-select-content-available-height));overflow:hidden;padding:5px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 48px rgba(13,27,36,.16);color:var(--ink);font-size:.9rem;animation:ui-select-in .14s ease-out}
+.ui-select-content[data-side=top]{animation-name:ui-select-in-up}
+.ui-select-viewport{padding:1px}
+.ui-select-item{position:relative;min-height:40px;padding:.55rem 2.3rem .55rem .75rem;display:flex;align-items:center;border-radius:8px;line-height:1.35;overflow-wrap:anywhere;cursor:pointer;outline:0;user-select:none}
+.ui-select-item[data-highlighted]{background:var(--cyan-soft,#e5f5fa);color:var(--cyan-dark)}
+.ui-select-item[data-state=checked]{font-weight:700;color:var(--cyan-dark)}
+.ui-select-item[data-disabled]{opacity:.42;cursor:not-allowed}
+.ui-select-check{position:absolute;right:.7rem;display:grid;place-items:center}
+.ui-select-scroll{height:26px;display:grid;place-items:center;color:#64747d;cursor:default}
+.ui-select-scroll:not(.is-down) svg{transform:rotate(180deg)}
+@keyframes ui-select-in{from{opacity:0;transform:translateY(-4px)}}
+@keyframes ui-select-in-up{from{opacity:0;transform:translateY(4px)}}
+@media(prefers-reduced-motion:reduce){.ui-select-content{animation:none}.ui-select-icon{transition:none}}
+/* Konteks storefront */
+.catalog-actions .ui-select-trigger{width:auto;min-width:170px;min-height:46px}
+.form-grid .ui-select-trigger{min-height:48px;padding-inline:.85rem}
+@media(max-width:760px){.ui-select-trigger{font-size:1rem}.ui-select-item{min-height:44px}}
