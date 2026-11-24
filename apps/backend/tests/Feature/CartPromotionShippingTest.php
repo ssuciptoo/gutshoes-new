@@ -58,6 +58,28 @@ it('applies only highest priority product discount then stacks one voucher', fun
     expect($result['subtotal'])->toBe('200000.00')->and($result['product_discount'])->toBe('50000.00')->and($result['voucher_discount'])->toBe('30000.00')->and($result['grand_total'])->toBe('140000.00');
 });
 
+it('limits a product-restricted voucher to the discounted price of those products', function () {
+    $eligible = ProductVariant::factory()->create(['price' => '200000.00']);
+    $other = ProductVariant::factory()->create(['price' => '800000.00']);
+    $cart = Cart::create(['guest_token' => fake()->uuid(), 'status' => 'ACTIVE']);
+    CartItem::create(['cart_id' => $cart->id, 'product_variant_id' => $eligible->id, 'quantity' => 1]);
+    CartItem::create(['cart_id' => $cart->id, 'product_variant_id' => $other->id, 'quantity' => 1]);
+    $promotion = Promotion::create(['name' => 'Promo', 'type' => 'PERCENTAGE', 'value' => '10.00', 'priority' => 1, 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    $promotion->products()->attach($eligible->product_id);
+    $percent = Voucher::create(['code' => 'ONLY50', 'name' => 'Only 50', 'type' => 'PERCENTAGE', 'value' => '50.00', 'minimum_amount' => '500000.00', 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    $percent->products()->attach($eligible->product_id);
+    $fixed = Voucher::create(['code' => 'ONLY500K', 'name' => 'Only 500K', 'type' => 'FIXED_AMOUNT', 'value' => '500000.00', 'minimum_amount' => '0.00', 'starts_at' => now()->subDay(), 'ends_at' => now()->addDay(), 'is_active' => true]);
+    $fixed->products()->attach($eligible->product_id);
+
+    // 50% dari harga produk yang berlaku setelah promo (180.000), bukan dari seluruh keranjang.
+    // Minimum transaksi 500.000 terpenuhi oleh total keranjang (980.000).
+    $result = app(PricingService::class)->calculate($cart, 'ONLY50', '20000.00');
+    expect($result['voucher_discount'])->toBe('90000.00')->and($result['grand_total'])->toBe('910000.00');
+
+    // Potongan nominal tidak boleh melebihi harga produk yang berlaku.
+    expect(app(PricingService::class)->calculate($cart, 'ONLY500K', '20000.00')['voucher_discount'])->toBe('180000.00');
+});
+
 it('calculates shipping and free shipping voucher from server data', function () {
     $warehouse = Warehouse::factory()->create(['provider_area_id' => 'origin']);
     $variant = ProductVariant::factory()->create(['price' => '150000.00', 'weight_grams' => 900]);

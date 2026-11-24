@@ -45,7 +45,10 @@ RUN composer check-platform-reqs --no-dev
 
 # Run as www-data: Caddy needs its data/config dirs writable, and port 8080 needs no
 # bind capability, so the file capability on the binary is dropped as well.
-RUN mkdir -p storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+# public/storage -> storage/app/public (sama dengan `artisan storage:link`): tanpa link ini gambar
+# produk di APP_URL/storage/... menjadi 404. Pasang volume persisten di /app/storage/app/public.
+RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
+    && ln -sfn ../storage/app/public public/storage \
     && chown -R www-data:www-data storage bootstrap/cache /data/caddy /config/caddy \
     && chmod -R ug+rwX storage bootstrap/cache \
     && setcap -r /usr/local/bin/frankenphp

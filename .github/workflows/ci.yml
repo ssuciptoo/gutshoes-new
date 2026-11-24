@@ -78,8 +78,8 @@ jobs:
         env:
           VITE_API_URL: https://api-ci.invalid/api/v1
           VITE_SITE_URL: https://ci.invalid
-          # Kunci publishable tiruan: build hanya memeriksa format, tidak menghubungi Clerk.
-          VITE_CLERK_PUBLISHABLE_KEY: pk_test_ci-placeholder
+          # Kunci publishable tiruan (host clerk.ci.invalid): build hanya memeriksa format, tidak menghubungi Clerk.
+          VITE_CLERK_PUBLISHABLE_KEY: pk_test_Y2xlcmsuY2kuaW52YWxpZCQ
 
   docker:
     name: Build Docker images
@@ -93,4 +93,13 @@ jobs:
         run: docker build --file apps/backend/Dockerfile --tag gutshoes-backend:ci apps/backend
 
       - name: Build storefront image
-        run: docker build --file apps/storefront/Dockerfile --tag gutshoes-storefront:ci --build-arg VITE_API_URL=https://api-ci.invalid/api/v1 --build-arg VITE_SITE_URL=https://ci.invalid --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_ci-placeholder --build-arg VITE_BUILD_MODE=staging apps/storefront
+        run: docker build --file apps/storefront/Dockerfile --tag gutshoes-storefront:ci --build-arg VITE_API_URL=https://api-ci.invalid/api/v1 --build-arg VITE_SITE_URL=https://ci.invalid --build-arg VITE_CLERK_PUBLISHABLE_KEY=pk_test_Y2xlcmsuY2kuaW52YWxpZCQ --build-arg VITE_BUILD_MODE=staging apps/storefront
+
+      - name: Check storefront image placeholders
+        run: |
+          # Placeholder nginx (__API_ORIGIN__, __CLERK_FAPI__, ...) harus sudah terisi saat build.
+          if docker run --rm gutshoes-storefront:ci grep -q '__[A-Z_]*__' /etc/nginx/conf.d/default.conf /etc/nginx/snippets/security-headers.conf; then
+            echo "Placeholder nginx belum terisi:" && docker run --rm gutshoes-storefront:ci grep -n '__[A-Z_]*__' /etc/nginx/conf.d/default.conf /etc/nginx/snippets/security-headers.conf
+            exit 1
+          fi
+          docker run --rm gutshoes-storefront:ci grep -q 'https://clerk.ci.invalid' /etc/nginx/snippets/security-headers.conf

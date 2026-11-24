@@ -35,6 +35,10 @@ Backend Laravel di `apps/backend` berkomunikasi dengan storefront melalui REST A
 
 ## Persiapan staging storefront
 
+> Panduan deploy staging lengkap (backend, worker, scheduler, storefront, dan dashboard pihak ketiga) ada di
+> [docs/STAGING_DEPLOYMENT.md](docs/STAGING_DEPLOYMENT.md). Langkah di bawah hanya untuk build bundle storefront;
+> image Docker storefront lebih disarankan karena membawa header keamanan, proxy sitemap, dan tag SEO produk.
+
 1. Salin `apps/storefront/.env.staging.example` menjadi `apps/storefront/.env.staging`.
 2. Ganti `VITE_API_URL` dengan URL HTTPS API staging yang berakhiran `/api/v1`. Nilai `VITE_*` dimasukkan ke bundle browser; jangan simpan secret di dalamnya.
 3. Dari `apps/storefront`, jalankan `npm run build:staging`. Vite memuat `.env.staging` untuk mode ini dan menghasilkan bundle di `apps/storefront/dist`. Build akan gagal jika URL API belum diisi, bukan HTTPS, atau masih memakai domain contoh.

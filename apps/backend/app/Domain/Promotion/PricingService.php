@@ -18,6 +18,7 @@ class PricingService
         $subtotal = 0.0;
         $productDiscount = 0.0;
         $lines = [];
+        $lineTotals = [];
         // One query for every promotion that touches this cart instead of one per item.
         $productIds = $cart->items->map(fn ($item) => $item->variant->product_id)->unique()->values();
         $promotions = Promotion::query()->where('is_active', true)->where('starts_at', '<=', now())->where('ends_at', '>=', now())
@@ -32,6 +33,7 @@ class PricingService
             // IDR has no minor unit at Midtrans; keep every amount in whole rupiah.
             $discount = $promotion ? min($line, round($promotion->type === 'PERCENTAGE' ? $line * ((float) $promotion->value / 100) : (float) $promotion->value)) : 0.0;
             $productDiscount += $discount;
+            $lineTotals[] = ['product_id' => $item->variant->product_id, 'amount' => $line - $discount];
             $lines[] = ['variant_id' => $item->product_variant_id, 'sku' => $item->variant->sku, 'quantity' => $item->quantity, 'unit_price' => number_format($unit, 2, '.', ''), 'discount' => number_format($discount, 2, '.', ''), 'line_total' => number_format($line - $discount, 2, '.', '')];
         }
         $afterProducts = $subtotal - $productDiscount;
@@ -51,10 +53,14 @@ class PricingService
             if (! $applicable) {
                 throw new DomainException('Voucher tidak berlaku untuk produk di keranjang.');
             }
+            // Voucher khusus produk hanya memotong harga (setelah diskon produk) dari produk tersebut;
+            // minimum transaksi tetap dihitung dari seluruh keranjang.
+            $voucherBase = $voucherProductIds->isEmpty() ? $afterProducts : (float) collect($lineTotals)
+                ->filter(fn (array $line) => $voucherProductIds->contains($line['product_id']))->sum('amount');
             if ($voucher->type === 'PERCENTAGE') {
-                $voucherDiscount = $afterProducts * ((float) $voucher->value / 100);
+                $voucherDiscount = $voucherBase * ((float) $voucher->value / 100);
             } elseif ($voucher->type === 'FIXED_AMOUNT') {
-                $voucherDiscount = min($afterProducts, (float) $voucher->value);
+                $voucherDiscount = min($voucherBase, (float) $voucher->value);
             } else {
                 $voucherDiscount = $shipping;
             }

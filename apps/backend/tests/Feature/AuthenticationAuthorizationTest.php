@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
 
@@ -46,6 +47,12 @@ it('answers unknown and existing admin emails the same way', function () {
     $known->assertUnprocessable();
     $unknown->assertUnprocessable();
     expect($unknown->json('errors'))->toBe($known->json('errors'));
+});
+
+it('only lets administrators open the Horizon dashboard', function () {
+    expect(Gate::forUser(User::factory()->admin()->create())->allows('viewHorizon'))->toBeTrue()
+        ->and(Gate::forUser(User::factory()->create())->allows('viewHorizon'))->toBeFalse()
+        ->and(Gate::forUser(null)->allows('viewHorizon'))->toBeFalse();
 });
 
 it('prevents customers from reading another customer address', function () {
