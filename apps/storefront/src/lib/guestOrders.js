@@ -54,7 +54,8 @@ const consumeGuestRecoveryLink = () => {
   window.history.replaceState(
     null,
     "",
-    url.pathname + url.search + (url.hash || "#tracking"),
+    // Tautan lama: /?guest_order=…#tracking; tautan baru: /tracking?guest_order=…
+    (url.pathname === "/" && !url.hash ? "/tracking" : url.pathname) + url.search + url.hash,
   );
   return reference;
 };

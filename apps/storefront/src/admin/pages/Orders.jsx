@@ -48,7 +48,7 @@ function OrdersPage({params = {}}) {
   const close = () => {
     setSelected(null);
     // Hapus ?order= dari URL agar muat ulang tidak membuka drawer lagi.
-    if (params.order) window.history.replaceState(null, "", "#admin/orders");
+    if (params.order) window.history.replaceState(null, "", "/admin/orders");
   };
 
   return (

@@ -13,7 +13,10 @@ RUN npm run build -- --mode "${VITE_BUILD_MODE}"
 
 FROM nginx:1.27-alpine
 
+ARG VITE_API_URL
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Isi alamat backend untuk proxy /sitemap.xml, mis. https://api.gutshoes.id dari https://api.gutshoes.id/api/v1.
+RUN api_origin="${VITE_API_URL%/}" && api_origin="${api_origin%/api/v1}" && api_host="${api_origin#*://}"     && test -n "$api_host"     && sed -i -e "s#__API_ORIGIN__#${api_origin}#g" -e "s#__API_HOST__#${api_host}#g" /etc/nginx/conf.d/default.conf
 COPY security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=build /app/dist /usr/share/nginx/html
 

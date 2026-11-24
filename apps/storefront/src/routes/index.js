@@ -1,3 +1,3 @@
-export {readRoute, routeHash, isAdminSection, routeTitle} from "./router";
+export {legacyHashUrl, readRoute, routeUrl, isAdminSection, isIndexable, routeTitle, routeSeo} from "./router";
 export {storefrontRoutes, getStorefrontRoute, isProtectedStorefrontRoute, renderStorefrontRoute} from "./storefrontRoutes";
 export {adminRoutes, getAdminRoute} from "./adminRoutes";

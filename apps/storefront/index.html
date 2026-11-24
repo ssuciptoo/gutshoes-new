@@ -5,13 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/png" href="/favicon.png" />
-    <meta name="description" content="GutShoes — temukan sepatu olahraga sesuai aktivitas dan ukuranmu." />
+    <!-- Tag bawaan (beranda). Untuk /product/{slug}, nginx (SSI, lihat nginx.conf) mengganti blok ini
+         dengan tag produk dari backend; bila backend gagal, blok ini dipakai apa adanya.
+         Di luar halaman produk, baris "#" di bawah hanyalah komentar HTML biasa. -->
+    <!--# block name="default_head" -->
+    <meta name="description" content="Belanja sepatu olahraga untuk lari, training, basket, futsal, dan anak di GutShoes. Pilih ukuran, cek stok, ongkir dihitung otomatis sebelum membayar." />
     <title>GutShoes — Sepatu olahraga untuk setiap langkah</title>
-    <link rel="canonical" href="__SITE_URL__/" />
+    <!-- canonical & og:url diatur per halaman oleh src/lib/seo.js; jangan ditulis statis di sini
+         (canonical statis "/" membuat semua halaman dianggap salinan beranda). -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="GutShoes" />
     <meta property="og:locale" content="id_ID" />
-    <meta property="og:url" content="__SITE_URL__/" />
     <meta property="og:title" content="GutShoes — Sepatu olahraga untuk setiap langkah" />
     <meta property="og:description" content="Temukan sepatu olahraga sesuai aktivitas, ukuran, dan anggaranmu. Ongkir dihitung otomatis sebelum membayar." />
     <meta property="og:image" content="__SITE_URL__/og-image.jpg" />
@@ -19,6 +23,8 @@
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Sepatu lari GutShoes berwarna biru navy" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!--# endblock -->
+    <!--# include virtual="/__seo/products/$seo_slug" stub="default_head" -->
   </head>
   <body>
     <noscript>GutShoes membutuhkan JavaScript. Aktifkan JavaScript di browser untuk berbelanja.</noscript>

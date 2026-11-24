@@ -25,7 +25,7 @@ async function capture(name, viewport) {
 const desktop = await capture('desktop', { width: 1536, height: 1024, deviceScaleFactor: 1 });
 await desktop.evaluate(() => [...document.querySelectorAll('button')].find(el => el.textContent.includes('Belanja sekarang'))?.click());
 await new Promise(resolve => setTimeout(resolve, 250));
-if (!await desktop.evaluate(() => location.hash)) errors.push('desktop: navigasi katalog tidak berubah');
+if (!await desktop.evaluate(() => location.pathname !== '/')) errors.push('desktop: navigasi katalog tidak berubah');
 await desktop.click('.product-card');
 await new Promise(resolve => setTimeout(resolve, 150));
 await desktop.click('.size-picker button:not([disabled])');

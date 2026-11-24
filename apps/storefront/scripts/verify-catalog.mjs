@@ -64,7 +64,7 @@ const expectNames = async expected => {
   await page.waitForFunction(wanted => JSON.stringify([...document.querySelectorAll('.product-grid--catalog h3')].map(n => n.textContent)) === JSON.stringify(wanted) && document.querySelector('[aria-label="Hasil katalog"]')?.getAttribute('aria-busy') === 'false', {}, expected);
 };
 try {
-  await page.goto(`${base}/#catalog`);
+  await page.goto(`${base}/catalog`);
   await ready();
   assert.deepEqual(await names(), catalog.data.slice(0, 12).map(p => p.name));
   console.log('PASS initial asynchronous catalog render');
@@ -112,7 +112,7 @@ try {
   assert.equal(await page.title(), `${product.name} — GutShoes`);
   console.log('PASS real API pages 2/3, product link, reload and direct URL outside preview');
 
-  await page.goto(`${base}/#catalog`);
+  await page.goto(`${base}/catalog`);
   await expectNames(catalog.data.slice(0, 2).map(p => p.name));
   await clickText('.catalog-pagination button', 'Berikutnya');
   await expectNames(catalog.data.slice(2, 4).map(p => p.name));
@@ -123,9 +123,9 @@ try {
   console.log('PASS filter changes reset pagination');
 
   mode = 'live';
-  await page.goto(`${base}/#product/does-not-exist-catalog-test`);
+  await page.goto(`${base}/product/does-not-exist-catalog-test`);
   await page.waitForFunction(() => document.querySelector('h1')?.textContent === 'Produk tidak ditemukan');
-  await page.goto(`${base}/#catalog`);
+  await page.goto(`${base}/catalog`);
   await search('no-match-gutshoes-93824');
   await page.waitForFunction(() => document.querySelector('.empty h2')?.textContent === 'Produk belum ditemukan');
   await clickText('button', 'Reset pencarian dan filter');

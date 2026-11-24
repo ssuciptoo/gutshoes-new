@@ -6,6 +6,7 @@ import Icon from "../components/ui/Icon";
 import ProductCard from "../components/catalog/ProductCard";
 
 import {useCatalog, useProduct} from "../lib/useCatalog";
+import {applySeo, productJsonLd} from "../lib/seo";
 
 function ProductDetail({slug, products, addToCart, navigate}) {
   const {product, loading, error: requestError, retry} = useProduct(slug);
@@ -19,9 +20,27 @@ function ProductDetail({slug, products, addToCart, navigate}) {
   const categorySlug = product?.categories?.[0]?.slug || "";
   const {products: sameCategory} = useCatalog({per_page: 5, sort: "best_selling", ...(categorySlug ? {category: categorySlug} : {})});
   const pointerStart = useRef(null);
+  // 404 dari API = produk tidak ada/belum dipublikasikan (bukan gangguan sementara).
+  const notFound = !loading && !product && (!requestError || requestError.status === 404);
   useEffect(() => {
-    document.title = product ? `${product.name} — GutShoes` : "Detail produk — GutShoes";
-  }, [product?.name]);
+    if (product) {
+      const lowest = Math.min(...(product.variants?.map((variant) => variant.price).filter((price) => price > 0) || []), product.price || Infinity);
+      const fallback = `${product.name} dari ${product.brand}${Number.isFinite(lowest) ? `, mulai ${rupiah(lowest)}` : ""}. Pilih ukuran, cek stok, dan pesan di GutShoes.`;
+      applySeo({
+        title: `${product.name} — GutShoes`,
+        description: product.description || fallback,
+        path: `/product/${encodeURIComponent(product.slug)}`,
+        image: product.image || undefined,
+        imageAlt: product.imageAlt,
+        type: "product",
+        jsonLd: productJsonLd(product),
+      });
+    } else if (notFound) {
+      applySeo({title: "Produk tidak ditemukan — GutShoes", noindex: true});
+    } else {
+      document.title = "Detail produk — GutShoes";
+    }
+  }, [product, notFound]);
   useEffect(() => {
     setActiveImage(0);
     setSize(null);

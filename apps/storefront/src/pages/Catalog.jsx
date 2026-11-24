@@ -4,6 +4,7 @@ import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
 import {CatalogError, CatalogLoading} from "./Home";
 import {useCatalog} from "../lib/useCatalog";
+import {applySeo} from "../lib/seo";
 
 function Catalog({query, setQuery, openProduct, initialFilter}) {
   const [category, setCategory] = useState(initialFilter || "");
@@ -29,6 +30,17 @@ function Catalog({query, setQuery, openProduct, initialFilter}) {
   if (priceBand === "mid") { params.min_price = 600000; params.max_price = 800000; }
   if (priceBand === "over") params.min_price = 800001;
   const {products, meta, filters: options, loading: fetching, error: failure, retry} = useCatalog(params);
+  // Halaman kategori (/catalog?filter=lari) punya judul & canonical sendiri agar bisa diindeks.
+  const filterName = options?.categories?.find((item) => item.slug === initialFilter)?.name;
+  useEffect(() => {
+    if (!initialFilter) return;
+    const name = filterName || initialFilter.replaceAll("-", " ");
+    applySeo({
+      title: `Sepatu ${name} — GutShoes`,
+      description: `Pilihan sepatu ${name.toLowerCase()} di GutShoes. Cek ukuran dan stok, ongkir dihitung otomatis sebelum membayar.`,
+      path: `/catalog?filter=${encodeURIComponent(initialFilter)}`,
+    });
+  }, [initialFilter, filterName]);
   useEffect(() => {
     if (meta && meta.current_page > meta.last_page) setPagination({key: filterKey, page: meta.last_page});
   }, [meta?.current_page, meta?.last_page, filterKey]);

@@ -82,7 +82,7 @@ it('renders a clean order email with HTML and plain text versions', function () 
     $html = $message->getHtmlBody();
     $text = $message->getTextBody();
     expect($message->getSubject())->toBe('Pesanan GS-MAIL-0002 menunggu pembayaran')
-        ->and($html)->toContain('Pesananmu sudah kami terima', 'Rp457.000', '24 November 2026, 15.01 WIB', 'https://toko.test/#order-detail/GS-MAIL-0002')
+        ->and($html)->toContain('Pesananmu sudah kami terima', 'Rp457.000', '24 November 2026, 15.01 WIB', 'https://toko.test/orders/GS-MAIL-0002')
         ->and($html)->not->toContain('Status email', 'PENDING')
-        ->and($text)->toContain('Total: Rp457.000', 'Lihat pesanan & bayar: https://toko.test/#order-detail/GS-MAIL-0002');
+        ->and($text)->toContain('Total: Rp457.000', 'Lihat pesanan & bayar: https://toko.test/orders/GS-MAIL-0002');
 });

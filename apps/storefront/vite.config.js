@@ -45,10 +45,34 @@ export default defineConfig(({command, mode}) => {
   }
 
   const siteUrl = (env.VITE_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
+  // robots.txt dibuat dari VITE_SITE_URL agar baris Sitemap menunjuk domain yang benar.
+  // Halaman transaksi & akun tidak perlu dirayapi; halaman tersebut juga diberi noindex.
+  const robots = [
+    "User-agent: *",
+    "Allow: /",
+    ...["/cart", "/checkout", "/payment", "/guest-orders", "/login", "/profile", "/addresses", "/orders", "/admin"].map((path) => `Disallow: ${path}`),
+    "",
+    `Sitemap: ${siteUrl}/sitemap.xml`,
+    "",
+  ].join("\n");
   const siteUrlPlugin = {
     name: "gutshoes-site-url",
     transformIndexHtml: (html) => html.replaceAll("__SITE_URL__", siteUrl),
+    configureServer(server) {
+      server.middlewares.use("/robots.txt", (_request, response) => {
+        response.setHeader("Content-Type", "text/plain; charset=utf-8");
+        response.end(robots);
+      });
+    },
+    generateBundle() {
+      this.emitFile({type: "asset", fileName: "robots.txt", source: robots});
+    },
   };
+  // Dev: sitemap dibuat backend (GET /api/v1/sitemap.xml); production diteruskan oleh nginx.
+  const apiOrigin = (env.VITE_API_URL || "http://localhost:8000/api/v1").replace(/\/api\/v1\/?$/, "");
 
-  return {plugins: [react(), siteUrlPlugin]};
+  return {
+    plugins: [react(), siteUrlPlugin],
+    server: {proxy: {"/sitemap.xml": {target: apiOrigin, changeOrigin: true, rewrite: () => "/api/v1/sitemap.xml"}}},
+  };
 });

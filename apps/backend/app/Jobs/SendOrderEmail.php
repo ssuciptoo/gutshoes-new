@@ -70,7 +70,7 @@ class SendOrderEmail implements ShouldQueue
     private function content(Order $order, GuestOrderAccess $guestAccess): array
     {
         $store = rtrim((string) config('services.storefront.url'), '/').'/';
-        $accountUrl = $order->user_id ? $store.'#order-detail/'.rawurlencode($order->order_number) : null;
+        $accountUrl = $order->user_id ? $store.'orders/'.rawurlencode($order->order_number) : null;
         $recoveryUrl = $order->user_id ? null : $guestAccess->recoveryUrl($order);
         $orderUrl = $accountUrl ?? $recoveryUrl;
         $deadline = $order->expires_at ? $order->expires_at->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d F Y, H.i').' WIB' : null;

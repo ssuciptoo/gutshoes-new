@@ -67,7 +67,7 @@ try {
    await page.waitForFunction(text => [...document.querySelectorAll('button')].some(b => b.textContent.includes(text) && !b.disabled), {}, text);
    await page.evaluate(text => [...document.querySelectorAll('button')].find(b=>b.textContent.includes(text) && !b.disabled).click(), text);
   };
-  await page.goto(base+'/#cart', {waitUntil:'domcontentloaded'});
+  await page.goto(base+'/cart', {waitUntil:'domcontentloaded'});
   await page.waitForSelector('.cart-item');
   await page.click('[aria-label="Tambah jumlah"]');
   await page.waitForFunction(()=>document.querySelector('.quantity span')?.textContent === '3');
@@ -87,11 +87,11 @@ try {
   await page.waitForFunction(()=>document.body.textContent.includes('Status pembuatan pesanan belum pasti'));
   await page.reload({waitUntil:'domcontentloaded'});
   await clickText('Periksa pesanan');
-  await page.waitForFunction(()=>location.hash === '#payment' && document.body.textContent.includes('Buka pembayaran Midtrans'));
+  await page.waitForFunction(()=>location.pathname === '/payment' && document.body.textContent.includes('Buka pembayaran Midtrans'));
   assert.equal(attempts.length,2);
   assert.deepEqual(attempts[0],attempts[1]);
   assert.equal(await page.evaluate(()=>sessionStorage.getItem('gutshoes-checkout-7')),null);
-  await page.evaluate(()=>{location.hash='#orders';});
+  await page.evaluate(()=>{history.pushState(null, '', '/orders'); dispatchEvent(new PopStateEvent('popstate'));});
   await page.waitForSelector('.history-item');
   await clickText('Lihat detail');
   await clickText('Ajukan pembatalan');

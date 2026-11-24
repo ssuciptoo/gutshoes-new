@@ -50,6 +50,7 @@ const STOREFRONT_TITLES = {
   addresses: "Alamat saya",
   orders: "Riwayat pesanan",
   "order-detail": "Detail pesanan",
+  "not-found": "Halaman tidak ditemukan",
 };
 
 const ADMIN_TITLES = {
@@ -66,55 +67,86 @@ const ADMIN_TITLES = {
   audit: "Audit log",
 };
 
-export function readRoute(hash = window.location.hash) {
-  const raw = hash.replace(/^#/, "") || "home";
-  const [path, search = ""] = raw.split("?");
-  const [page, encodedParameter] = path.split("/");
-  const parameter = decodeURIComponent(encodedParameter || "");
-  if (page === "admin") {
+// Toko memakai alamat biasa (/product/junior-dash), bukan hash (#product/junior-dash),
+// agar setiap halaman bisa diindeks mesin pencari dan dibagikan dengan pratinjau sendiri.
+const decode = (value) => {
+  try {
+    return decodeURIComponent(value || "");
+  } catch {
+    return "";
+  }
+};
+
+function routeFromParts(segments, search) {
+  const [first = "", second = ""] = segments;
+  const parameter = decode(second);
+  if (!first) return {page: "home", data: {}};
+  if (first === "admin") {
     return {
-      page,
+      page: "admin",
       data: {
         section: ADMIN_SECTIONS.has(parameter) ? parameter : "dashboard",
-        // Parameter halaman admin, mis. #admin/orders?order=GS-123 atau ?status=OVERDUE
+        // Parameter halaman admin, mis. /admin/orders?order=GS-123 atau ?status=OVERDUE
         params: Object.fromEntries(new URLSearchParams(search)),
       },
     };
   }
-  if (!STOREFRONT_PAGES.has(page)) return {page: "home", data: {}};
-  if (page === "product") return {page, data: {slug: parameter}};
-  if (page === "catalog") {
-    return {
-      page,
-      data: {filter: new URLSearchParams(search).get("filter") || undefined},
-    };
+  // Detail pesanan: /orders/GS-… (alamat lama #order-detail/GS-… tetap dikenali).
+  if ((first === "orders" && parameter) || first === "order-detail") {
+    return {page: "order-detail", data: {orderNumber: parameter}};
   }
-  if (page === "order-detail") return {page, data: {orderNumber: parameter}};
-  return {page, data: {}};
+  if (first === "product") return parameter ? {page: "product", data: {slug: parameter}} : {page: "catalog", data: {}};
+  if (first === "catalog") {
+    return {page: "catalog", data: {filter: new URLSearchParams(search).get("filter") || undefined}};
+  }
+  if (segments.length === 1 && STOREFRONT_PAGES.has(first)) return {page: first, data: {}};
+  return {page: "not-found", data: {}};
 }
 
-export function routeHash(page, data = {}) {
+export function readRoute(location = window.location) {
+  const url = typeof location === "string" ? new URL(location, window.location.origin) : location;
+  const segments = url.pathname.split("/").filter(Boolean);
+  return routeFromParts(segments, url.search);
+}
+
+export function routeUrl(page, data = {}) {
   if (page === "admin") {
-    const section = ADMIN_SECTIONS.has(data.section)
-      ? data.section
-      : "dashboard";
+    const section = ADMIN_SECTIONS.has(data.section) ? data.section : "dashboard";
     const query = new URLSearchParams(
       Object.entries(data.params || {}).filter(([, value]) => value),
     ).toString();
-    return `#admin/${section}${query ? `?${query}` : ""}`;
+    return `/admin/${section}${query ? `?${query}` : ""}`;
   }
-  if (!STOREFRONT_PAGES.has(page)) return "#home";
+  if (page === "home" || !STOREFRONT_PAGES.has(page)) return "/";
   if (page === "product") {
     const slug = data.product?.slug || data.product?.id || data.slug || "";
-    return `#product/${encodeURIComponent(slug)}`;
+    return `/product/${encodeURIComponent(slug)}`;
   }
   if (page === "catalog" && data.filter) {
-    return `#catalog?filter=${encodeURIComponent(data.filter)}`;
+    return `/catalog?filter=${encodeURIComponent(data.filter)}`;
   }
   if (page === "order-detail") {
-    return `#order-detail/${encodeURIComponent(data.orderNumber || "")}`;
+    return `/orders/${encodeURIComponent(data.orderNumber || "")}`;
   }
-  return `#${page}`;
+  return `/${page}`;
+}
+
+/**
+ * Tautan lama berbentuk /#product/junior-dash (email, WhatsApp, bookmark) diubah ke alamat
+ * baru tanpa memuat ulang. Hash biasa seperti #main (tautan lompat) dibiarkan.
+ * @returns {string|null} alamat baru bila ada yang dialihkan.
+ */
+export function legacyHashUrl(location = window.location) {
+  if (location.pathname !== "/" || !location.hash.startsWith("#")) return null;
+  const raw = location.hash.slice(1);
+  const [path, search = ""] = raw.split("?");
+  const segments = path.split("/").filter(Boolean);
+  const first = segments[0] || "";
+  if (first !== "admin" && first !== "order-detail" && !STOREFRONT_PAGES.has(first)) return null;
+  const route = routeFromParts(segments, search ? `?${search}` : "");
+  if (route.page === "not-found") return null;
+  // Query lama di depan hash (mis. ?guest_order=…&token=… dari email) tetap dibawa.
+  return routeUrl(route.page, route.data) + (route.page === "catalog" || route.page === "admin" ? "" : location.search);
 }
 
 export function isAdminSection(section) {
@@ -131,5 +163,35 @@ export function routeTitle(route, productName = "") {
   if (route.page === "order-detail" && route.data.orderNumber) {
     return `Pesanan ${route.data.orderNumber} — GutShoes`;
   }
+  if (route.page === "home") return `GutShoes — ${STOREFRONT_TITLES.home}`;
   return `${STOREFRONT_TITLES[route.page] || STOREFRONT_TITLES.home} — GutShoes`;
+}
+
+// Halaman publik yang boleh diindeks mesin pencari. Halaman lain (keranjang, checkout,
+// akun, pesanan, admin, halaman tidak ditemukan) diberi noindex.
+const INDEXABLE_PAGES = new Set(["home", "catalog", "product", "tracking", "contact", "privacy", "terms", "returns"]);
+
+const STOREFRONT_DESCRIPTIONS = {
+  home: "Belanja sepatu olahraga untuk lari, training, basket, futsal, dan anak di GutShoes. Pilih ukuran, cek stok, ongkir dihitung otomatis sebelum membayar.",
+  catalog: "Lihat semua sepatu olahraga GutShoes. Saring berdasarkan aktivitas, merek, ukuran, dan harga, lalu cek stok setiap ukuran.",
+  tracking: "Lacak status pesanan GutShoes dengan nomor pesanan dan email yang dipakai saat checkout.",
+  contact: "Hubungi layanan pelanggan GutShoes untuk pertanyaan produk, pesanan, pengiriman, dan pengembalian.",
+  privacy: "Kebijakan privasi GutShoes: data apa yang kami kumpulkan, untuk apa dipakai, dan bagaimana kami melindunginya.",
+  terms: "Syarat dan ketentuan berbelanja di GutShoes, termasuk pemesanan, pembayaran, dan pengiriman.",
+  returns: "Ketentuan pengembalian barang dan refund di GutShoes: syarat, batas waktu, dan cara mengajukan.",
+};
+
+export function isIndexable(page) {
+  return INDEXABLE_PAGES.has(page);
+}
+
+// Tag SEO bawaan untuk sebuah route (halaman produk & kategori melengkapinya sendiri).
+export function routeSeo(route) {
+  const noindex = route.page === "admin" || !INDEXABLE_PAGES.has(route.page);
+  return {
+    title: routeTitle(route),
+    ...(STOREFRONT_DESCRIPTIONS[route.page] ? {description: STOREFRONT_DESCRIPTIONS[route.page]} : {}),
+    path: noindex ? null : routeUrl(route.page, route.data),
+    noindex,
+  };
 }

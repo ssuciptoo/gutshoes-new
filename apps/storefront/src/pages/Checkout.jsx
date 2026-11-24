@@ -34,6 +34,14 @@ function Checkout({
   const [operation, setOperation] = useState("");
   const [error, setError] = useState("");
   const [invalidFields, setInvalidFields] = useState([]);
+  // Alamat tersimpan yang dipilih ("new" = isi alamat baru). Default: alamat utama.
+  const [addressChoice, setAddressChoice] = useState(null);
+  const defaultAddress = addresses.find((address) => address.isDefault) || addresses[0];
+  const choice = user && addresses.length ? addressChoice ?? String(defaultAddress.id) : "new";
+  const chosenAddress = addresses.find((address) => String(address.id) === choice);
+  // Telepon profil hanya dipakai bila formatnya valid; jika tidak, pakai telepon alamat utama.
+  const validPhone = (value) => /^[0-9+ -]{8,20}$/.test(String(value || "").trim());
+  const suggestedPhone = [user?.phone, defaultAddress?.phone].find(validPhone) || "";
   const checkoutFormRef = useRef(null);
   const attemptStorageKey = "gutshoes-checkout-" + (user?.id || "guest");
   const orderAttempt = useRef(null);
@@ -111,9 +119,7 @@ function Checkout({
     setInvalidFields([]);
     if (!form.reportValidity()) return;
     const data = Object.fromEntries(new FormData(form));
-    const selectedAddress = addresses.find(
-      (address) => String(address.id) === data.savedAddress,
-    );
+    const selectedAddress = chosenAddress;
     if (
       !selectedAddress &&
       (!data.province_code ||
@@ -137,7 +143,7 @@ function Checkout({
       ? {
           ...data,
           name: selectedAddress.recipient,
-          phone: selectedAddress.phone,
+          phone: selectedAddress.phone || data.phone,
           address: selectedAddress.address,
           province: selectedAddress.province,
           city: selectedAddress.city,
@@ -357,28 +363,64 @@ function Checkout({
                 >
                   {addresses.map((address) => (
                     <label
-                      className={address.isDefault ? "selected" : ""}
+                      className={choice === String(address.id) ? "selected" : ""}
                       key={address.id}
                     >
                       <input
                         type="radio"
                         name="savedAddress"
                         value={address.id}
-                        defaultChecked={address.isDefault}
+                        checked={choice === String(address.id)}
+                        onChange={() => { setAddressChoice(String(address.id)); setInvalidFields([]); setError(""); }}
                       />
                       <span>
                         <strong>
                           {address.label} · {address.recipient}
                         </strong>
                         <small>
+                          {address.phone && <>{address.phone} · </>}
                           {address.address}, {address.city} {address.postal}
                         </small>
                       </span>
                       {address.isDefault && <b>Utama</b>}
                     </label>
                   ))}
+                  <label className={choice === "new" ? "selected" : ""}>
+                    <input
+                      type="radio"
+                      name="savedAddress"
+                      value="new"
+                      checked={choice === "new"}
+                      onChange={() => { setAddressChoice("new"); setInvalidFields([]); setError(""); }}
+                    />
+                    <span>
+                      <strong>Kirim ke alamat baru</strong>
+                      <small>Isi nama penerima, nomor telepon, dan alamat tujuan.</small>
+                    </span>
+                  </label>
                 </div>
               )}
+              {chosenAddress ? (
+                // Alamat tersimpan sudah berisi penerima, telepon, dan wilayah: tidak perlu diisi ulang.
+                <>
+                  <input type="hidden" name="email" value={user?.email || ""} />
+                  {!chosenAddress.phone && (
+                    <div className="form-grid">
+                      <label>
+                        Nomor telepon penerima
+                        <input
+                          name="phone"
+                          required
+                          inputMode="tel"
+                          autoComplete="tel"
+                          pattern="[0-9+ -]{8,20}"
+                          defaultValue={suggestedPhone}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </>
+              ) : (
               <div className="form-grid">
                 <label>
                   Nama lengkap
@@ -415,7 +457,7 @@ function Checkout({
                     aria-invalid={invalidFields.includes("phone")}
                     aria-describedby={invalidFields.includes("phone") ? "checkout-error" : undefined}
                     pattern="[0-9+ -]{8,20}"
-                    defaultValue={user?.phone || ""}
+                    defaultValue={suggestedPhone}
                   />
                 </label>
                 <label className="span-2">
@@ -427,19 +469,16 @@ function Checkout({
                     autoComplete="street-address"
                     aria-invalid={invalidFields.includes("address")}
                     aria-describedby={invalidFields.includes("address") ? "checkout-error" : undefined}
-                    defaultValue={
-                      addresses.find((address) => address.isDefault)?.address ||
-                      ""
-                    }
                   />
                 </label>
                 <RegionFields
-                  initial={addresses.find((address) => address.isDefault) || {}}
+                  initial={{}}
                   searchable
                   invalidFields={invalidFields}
                   errorId="checkout-error"
                 />
               </div>
+              )}
               <Feedback id="checkout-error">{error}</Feedback>
               <Button
                 type="submit"

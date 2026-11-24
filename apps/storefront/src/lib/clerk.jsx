@@ -59,8 +59,8 @@ export function ClerkSessionBridge({onChange}) {
 // dengan router toko; setelah berhasil pelanggan diarahkan ke halaman tujuan (returnTo).
 function useClerkSignIn() {
   const clerk = useClerk();
-  return (returnTo = "profile") => {
-    const target = `${window.location.origin}${window.location.pathname}#${returnTo}`;
+  return (returnTo = "/profile") => {
+    const target = `${window.location.origin}${returnTo.startsWith("/") ? returnTo : "/profile"}`;
     clerk.openSignIn({forceRedirectUrl: target, signUpForceRedirectUrl: target});
   };
 }

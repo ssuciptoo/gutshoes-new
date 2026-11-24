@@ -47,9 +47,9 @@ class GuestOrderAccess
             return null;
         }
 
-        return rtrim((string) config('services.storefront.url'), '/').'/?'.http_build_query([
+        return rtrim((string) config('services.storefront.url'), '/').'/tracking?'.http_build_query([
             'guest_order' => $order->order_number,
             'token' => $token,
-        ]).'#tracking';
+        ]);
     }
 }

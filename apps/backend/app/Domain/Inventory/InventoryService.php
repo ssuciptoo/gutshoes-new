@@ -94,8 +94,12 @@ class InventoryService
             if ($inventory->reserved < $quantity || $inventory->on_hand < $quantity) {
                 throw new DomainException('Inventory invariant violated.');
             }
-            $inventory->decrementEach(['on_hand' => $quantity, 'reserved' => $quantity]);
-            $inventory->increment('sold', $quantity);
+            // Wajib lewat query yang dibatasi ke baris ini: Model Eloquent tidak punya decrementEach,
+            // sehingga $inventory->decrementEach() menjadi UPDATE tanpa WHERE untuk seluruh tabel.
+            Inventory::query()->whereKey($inventory->id)->decrementEach(
+                ['on_hand' => $quantity, 'reserved' => $quantity],
+                ['sold' => DB::raw('sold + '.(int) $quantity), 'updated_at' => now()],
+            );
             $inventory->refresh();
             $lockedReservation->update(['status' => ReservationStatus::SOLD->value, 'released_at' => now()]);
             $this->movement($inventory, InventoryMovementType::SELL, -$quantity, 'Reserved stock sold', InventoryReservation::class, $lockedReservation->id);

@@ -5,7 +5,7 @@ function ResourceState({loading, error, retry}) {
   if (loading)
     return (
       <div className="adm-resource-state" role="status">
-        Memuat data operasional…
+        Memuat data…
       </div>
     );
   if (error)

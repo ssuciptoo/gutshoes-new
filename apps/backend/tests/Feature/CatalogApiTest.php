@@ -35,7 +35,7 @@ it('supports catalog search by SKU', function () {
 
 it('finds products by their activity category and treats wildcards literally', function () {
     $basket = Product::factory()->create(['name' => 'Elevate High']);
-    $category = App\Models\Category::create(['name' => 'Basket', 'slug' => 'basket']);
+    $category = Category::create(['name' => 'Basket', 'slug' => 'basket']);
     $basket->categories()->attach($category);
     Product::factory()->create(['name' => 'Stride Flow']);
 
@@ -184,4 +184,50 @@ it('applies price bounds to one variant and accepts a standalone maximum', funct
     ProductVariant::factory()->create(['product_id' => $product->id, 'price' => 900000]);
     $this->getJson('/api/v1/products?max_price=599999')->assertOk()->assertJsonPath('meta.total', 1);
     $this->getJson('/api/v1/products?min_price=600000&max_price=800000')->assertOk()->assertJsonPath('meta.total', 0);
+});
+
+it('lists public pages, categories, and only published products in the sitemap on the storefront domain', function () {
+    config(['services.storefront.url' => 'https://toko.test/']);
+    $published = Product::factory()->create(['slug' => 'stride-flow', 'status' => 'PUBLISHED']);
+    $published->categories()->attach(Category::create(['name' => 'Lari & Jalan', 'slug' => 'lari']));
+    Category::create(['name' => 'Kosong', 'slug' => 'kosong']);
+    Product::factory()->create(['slug' => 'masih-draft', 'status' => 'DRAFT']);
+
+    $response = $this->get('/api/v1/sitemap.xml')->assertOk();
+
+    expect($response->headers->get('Content-Type'))->toContain('application/xml');
+    $xml = simplexml_load_string($response->getContent());
+    $locations = [];
+    foreach ($xml->url as $url) {
+        $locations[] = (string) $url->loc;
+    }
+    expect($locations)->toContain('https://toko.test/', 'https://toko.test/catalog', 'https://toko.test/privacy',
+        'https://toko.test/catalog?filter=lari', 'https://toko.test/product/stride-flow')
+        ->not->toContain('https://toko.test/product/masih-draft', 'https://toko.test/catalog?filter=kosong', 'https://toko.test/cart');
+});
+
+it('renders escaped product head tags for link previews and noindex for unknown products', function () {
+    config(['services.storefront.url' => 'https://toko.test']);
+    $brand = Brand::factory()->create(['name' => 'AeroRun']);
+    $product = Product::factory()->create(['brand_id' => $brand->id, 'slug' => 'stride-flow', 'name' => 'Stride "Flow" </script>', 'description' => 'Ringan & empuk untuk lari harian.', 'status' => 'PUBLISHED']);
+    $product->categories()->attach(Category::create(['name' => 'Lari', 'slug' => 'lari']));
+    $warehouse = Warehouse::factory()->create();
+    foreach (['599000.00', '699000.00'] as $index => $price) {
+        $variant = ProductVariant::factory()->create(['product_id' => $product->id, 'size_id' => Size::factory()->create()->id, 'price' => $price]);
+        Inventory::factory()->create(['warehouse_id' => $warehouse->id, 'product_variant_id' => $variant->id, 'on_hand' => $index, 'reserved' => 0]);
+    }
+
+    $html = $this->get('/api/v1/seo/products/stride-flow')->assertOk()->getContent();
+
+    expect($html)->toContain('<title>Stride &quot;Flow&quot; &lt;/script&gt; — GutShoes</title>',
+        '<link rel="canonical" href="https://toko.test/product/stride-flow" />',
+        '<meta property="og:description" content="Ringan &amp; empuk untuk lari harian." />',
+        '"@type":"AggregateOffer"', '"lowPrice":"599000"', '"highPrice":"699000"', '"availability":"https://schema.org/InStock"',
+        '"item":"https://toko.test/catalog?filter=lari"')
+        ->not->toContain('</script> —', 'noindex');
+    expect(substr_count($html, '</script>'))->toBe(1);
+
+    Product::factory()->create(['slug' => 'masih-draft', 'status' => 'DRAFT']);
+    expect($this->get('/api/v1/seo/products/masih-draft')->assertOk()->getContent())
+        ->toContain('noindex')->not->toContain('canonical');
 });

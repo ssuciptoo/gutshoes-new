@@ -35,8 +35,8 @@ class HttpMidtransProvider implements MidtransProvider
         $base = rtrim((string) config('services.storefront.url'), '/').'/';
 
         return $order->user_id
-            ? $base.'#order-detail/'.rawurlencode($order->order_number)
-            : $base.'#guest-orders';
+            ? $base.'orders/'.rawurlencode($order->order_number)
+            : $base.'guest-orders';
     }
 
     public function closeTransaction(Order $order, string $action): array

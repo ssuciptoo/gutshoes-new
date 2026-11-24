@@ -8,7 +8,7 @@ const browser = await puppeteer.launch({
 
 const page = await browser.newPage();
 await page.setViewport({ width: 1024, height: 768 });
-await page.goto('http://127.0.0.1:4174/#login', { waitUntil: 'networkidle0' });
+await page.goto('http://127.0.0.1:4174/login', { waitUntil: 'networkidle0' });
 await page.click('.google-button');
 await new Promise(resolve => setTimeout(resolve, 900));
 

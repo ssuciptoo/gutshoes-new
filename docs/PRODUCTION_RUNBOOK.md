@@ -17,6 +17,15 @@ Ongkir di-cache selama `SHIPPING_QUOTE_CACHE_MINUTES` (default 15) per asal, tuj
 
 Jangan gunakan regions:import --fresh dalam deployment rutin. Opsi tersebut menghapus tabel dari child ke parent, membutuhkan --force di production, dan dapat ditolak foreign key bila wilayah sudah direferensikan alamat. Pembaruan dataset normal dilakukan dengan mengganti CSV beserta database/data/regions/manifest.json, meninjau diff sumber, lalu menjalankan impor idempoten tanpa --fresh.
 
+## SEO storefront
+
+- Build image storefront dengan `VITE_SITE_URL` (domain toko, mis. `https://gutshoes.id`) dan `VITE_API_URL`. `robots.txt` dibuat saat build dan menunjuk ke `<VITE_SITE_URL>/sitemap.xml`.
+- `STOREFRONT_URL` di backend harus sama dengan `VITE_SITE_URL`: alamat di sitemap memakai nilai ini.
+- nginx toko meneruskan `/sitemap.xml` ke `<API>/api/v1/sitemap.xml` (alamat API diisi dari `VITE_API_URL` saat build image). Sitemap berisi halaman publik, kategori yang punya produk, dan produk berstatus PUBLISHED; di-cache 10 menit.
+- Setelah deploy pertama: cek `curl -fsS https://<domain>/robots.txt` dan `curl -fsS https://<domain>/sitemap.xml`, lalu daftarkan domain di Google Search Console dan kirim `https://<domain>/sitemap.xml`.
+- Pratinjau link produk: untuk `/product/{slug}`, nginx menyalakan SSI dan menyisipkan tag `<head>` dari `<API>/api/v1/seo/products/{slug}` (judul, deskripsi, Open Graph, JSON-LD; di-cache 10 menit). Bila backend gagal/lambat (>3 detik), nginx memakai tag bawaan di `index.html`, jadi halaman tetap terbuka. Cek setelah deploy: `curl -fsS https://<domain>/product/<slug> | grep og:title` harus menampilkan nama produk, lalu uji link di Facebook Sharing Debugger.
+- Jangan ganti slug produk yang sudah dipublikasikan: tautan yang sudah diindeks atau dibagikan akan menjadi "tidak ditemukan".
+
 ## Verifikasi master wilayah
 
 Ekspektasi dataset pada artifact saat ini:

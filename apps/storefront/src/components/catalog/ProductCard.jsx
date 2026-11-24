@@ -2,7 +2,7 @@ import React from "react";
 import {rupiah} from "../../lib/currency";
 
 function ProductCard({product, onOpen}) {
-  const href = `#product/${encodeURIComponent(product.slug || product.id)}`;
+  const href = `/product/${encodeURIComponent(product.slug || product.id)}`;
   const open = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     event.preventDefault();

@@ -669,3 +669,19 @@
 .adm-recent-link:hover{background:rgba(0,125,169,.04)}
 .adm-recent-link:focus-visible{outline:3px solid #8fe7f7;outline-offset:-3px}
 .adm-order-link{padding:0;min-height:0!important;text-align:left;font-size:.8rem}
+
+/* Review lanjutan: login mobile, filter toolbar, checkbox editor, input angka. */
+@media(max-width:760px){
+  .admin-login{background:#fff;grid-template-rows:auto 1fr}
+  .admin-login>section{background:none;padding:14px 16px 0!important}
+  .admin-login>section>button{min-height:44px;padding:0;color:var(--adm-action,#007fae);font-weight:700}
+  .admin-login form{padding-top:1rem!important}
+}
+.adm-toolbar select{appearance:none;-webkit-appearance:none;cursor:pointer;font-weight:650;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364747d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center;padding:0 38px 0 14px}
+.adm-toolbar select:hover{border-color:#aebdc4}
+.adm-choice-field input[type=checkbox],.adm-check input{flex:0 0 auto;margin:0;padding:0;min-height:0!important;height:18px!important}
+.adm-check{display:flex;align-items:center;gap:8px;font-weight:650!important;cursor:pointer}
+.adm-choice-field label{cursor:pointer;line-height:1.2}
+.adm-form-grid .adm-stock-number{background:#fff}
+.adm-form-grid .adm-stock-number input{padding:11px 14px;font-size:.8rem;font-weight:500}
+.adm-form-grid .adm-stock-number b{align-self:stretch;display:flex;align-items:center;background:#f5f7f8;border-left:1px solid #e2e8eb}

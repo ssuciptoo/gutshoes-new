@@ -22,23 +22,23 @@ function Footer() {
       </div>
       <div>
         <strong>Belanja</strong>
-        <a href="#catalog">Semua sepatu</a>
-        <a href="#catalog?filter=lari">Lari</a>
-        <a href="#catalog?filter=training">Training</a>
+        <a href="/catalog">Semua sepatu</a>
+        <a href="/catalog?filter=lari">Lari</a>
+        <a href="/catalog?filter=training">Training</a>
       </div>
       <div>
         <strong>Bantuan</strong>
-        <a href="#tracking">Lacak pesanan</a>
-        <a href="#returns">Pengembalian & refund</a>
-        <a href="#contact">Hubungi kami</a>
-        <a href="#guest-orders">Pesanan tanpa akun</a>
+        <a href="/tracking">Lacak pesanan</a>
+        <a href="/returns">Pengembalian & refund</a>
+        <a href="/contact">Hubungi kami</a>
+        <a href="/guest-orders">Pesanan tanpa akun</a>
       </div>
       <div>
         <strong>Akun & kebijakan</strong>
-        <a href="#orders">Riwayat pesanan</a>
-        <a href="#profile">Profil</a>
-        <a href="#terms">Syarat & ketentuan</a>
-        <a href="#privacy">Kebijakan privasi</a>
+        <a href="/orders">Riwayat pesanan</a>
+        <a href="/profile">Profil</a>
+        <a href="/terms">Syarat & ketentuan</a>
+        <a href="/privacy">Kebijakan privasi</a>
       </div>
       {(copyright || info.version) && (
         <p className="footer-legal">

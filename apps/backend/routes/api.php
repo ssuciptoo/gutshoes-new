@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Store\StoreInfo;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminBrandController;
 use App\Http\Controllers\Api\V1\AdminCategoryController;
@@ -16,10 +17,12 @@ use App\Http\Controllers\Api\V1\CustomerOrderController;
 use App\Http\Controllers\Api\V1\GuestOrderController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\ProductSeoController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ReadinessController;
 use App\Http\Controllers\Api\V1\RegionController;
 use App\Http\Controllers\Api\V1\SessionController;
+use App\Http\Controllers\Api\V1\SitemapController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
@@ -29,7 +32,11 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
     Route::get('/regions/regencies', [RegionController::class, 'regencies']);
     Route::get('/regions/districts', [RegionController::class, 'districts']);
     Route::get('/regions/villages', [RegionController::class, 'villages']);
-    Route::get('/store-info', fn (App\Domain\Store\StoreInfo $info) => response()->json(['data' => $info->current()]));
+    Route::get('/store-info', fn (StoreInfo $info) => response()->json(['data' => $info->current()]));
+    Route::get('/sitemap.xml', SitemapController::class);
+    // Dipanggil nginx toko (subrequest SSI) untuk setiap halaman produk: semua dari IP server toko,
+    // jadi tidak memakai batas per-IP; hasilnya di-cache 10 menit per produk.
+    Route::get('/seo/products/{slug}', ProductSeoController::class)->withoutMiddleware('throttle:api');
     Route::get('/products', [CatalogController::class, 'index']);
     Route::get('/products/{slug}', [CatalogController::class, 'show']);
     Route::post('/payments/midtrans/webhook', [PaymentController::class, 'webhook'])->middleware('throttle:webhooks');

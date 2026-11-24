@@ -104,7 +104,7 @@ async function openPage(name, viewport) {
     if (message.type() === "error") errors.push(`${name}: ${message.text()}`);
   });
   page.on("pageerror", (error) => errors.push(`${name}: ${error.message}`));
-  await page.goto("http://127.0.0.1:4174/#admin/sizes", {
+  await page.goto("http://127.0.0.1:4174/admin/sizes", {
     waitUntil: "networkidle0",
     timeout: 30000,
   });

@@ -60,3 +60,18 @@ it('converts a reservation to sold stock idempotently', function () {
     expect(app(InventoryService::class)->sell($reservation))->toBeFalse();
     expect($inventory->refresh()->on_hand)->toBe(1)->and($inventory->reserved)->toBe(0)->and($inventory->sold)->toBe(2);
 });
+
+it('sells only the reserved inventory row and leaves other variants untouched', function () {
+    $warehouse = Warehouse::factory()->create();
+    $sold = Inventory::factory()->create(['warehouse_id' => $warehouse->id, 'on_hand' => 8, 'reserved' => 0, 'sold' => 0]);
+    // Varian lain yang juga sedang dipesan: sebelum perbaikan, stoknya ikut berkurang.
+    $other = Inventory::factory()->create(['warehouse_id' => $warehouse->id, 'on_hand' => 5, 'reserved' => 0, 'sold' => 0]);
+    $service = app(InventoryService::class);
+    $reservation = $service->reserve($sold, inventoryOrder($warehouse, 'ORD-SELL-1'), 1);
+    $service->reserve($other, inventoryOrder($warehouse, 'ORD-SELL-2'), 2);
+
+    expect($service->sell($reservation))->toBeTrue();
+
+    expect($sold->refresh()->only(['on_hand', 'reserved', 'sold']))->toBe(['on_hand' => 7, 'reserved' => 0, 'sold' => 1])
+        ->and($other->refresh()->only(['on_hand', 'reserved', 'sold']))->toBe(['on_hand' => 5, 'reserved' => 2, 'sold' => 0]);
+});

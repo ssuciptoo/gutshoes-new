@@ -238,7 +238,7 @@ it('sends Snap a finish URL back to the order without exposing the guest token',
     (new HttpMidtransProvider)->createSnapTransaction($order->refresh());
 
     $finishUrls = Illuminate\Support\Facades\Http::recorded()->map(fn ($pair) => $pair[0]['callbacks']['finish'] ?? null)->all();
-    expect($finishUrls)->toBe(['https://toko.test/#guest-orders', 'https://toko.test/#order-detail/'.$order->order_number])
+    expect($finishUrls)->toBe(['https://toko.test/guest-orders', 'https://toko.test/orders/'.$order->order_number])
         ->and(implode(' ', $finishUrls))->not->toContain((string) $order->guest_access_token);
 });
 

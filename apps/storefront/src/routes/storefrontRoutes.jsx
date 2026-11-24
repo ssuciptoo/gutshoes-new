@@ -14,6 +14,7 @@ const Addresses = lazy(() => import("../pages/account/Addresses"));
 const Orders = lazy(() => import("../pages/account/Orders"));
 const OrderDetail = lazy(() => import("../pages/account/OrderDetail"));
 const StoreInfo = lazy(() => import("../pages/StoreInfo"));
+const NotFound = lazy(() => import("../pages/NotFound"));
 
 // Halaman informasi toko (kontak & kebijakan) memakai satu komponen.
 const storeInfoRoutes = ["contact", "privacy", "terms", "returns"].map((page) => ({
@@ -183,7 +184,7 @@ export const storefrontRoutes = [
   },
   {
     page: "order-detail",
-    path: "/order-detail/:orderNumber",
+    path: "/orders/:orderNumber",
     protected: true,
     render: (c) => (
       <OrderDetail
@@ -196,7 +197,11 @@ export const storefrontRoutes = [
   },
 ];
 // Ditaruh di akhir agar route cadangan (indeks 0) tetap Beranda.
-storefrontRoutes.push(...storeInfoRoutes);
+storefrontRoutes.push(...storeInfoRoutes, {
+  page: "not-found",
+  path: "*",
+  render: (c) => <NotFound navigate={c.navigate} />,
+});
 
 export function getStorefrontRoute(page) {
   return (

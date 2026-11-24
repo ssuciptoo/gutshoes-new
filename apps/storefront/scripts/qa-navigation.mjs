@@ -16,14 +16,14 @@ try {
     const timings = await page.evaluate(async () => {
       const timings = [];
       for (let i = 0; i < 4; i++) {
-        const expected = i % 2 ? '#home' : '#catalog';
+        const expected = i % 2 ? '/' : '/catalog';
         window.scrollTo({top: 500, behavior: 'instant'});
         const start = performance.now();
         document.querySelectorAll('.nav button')[i % 2 ? 0 : 1].click();
         await new Promise((resolve, reject) => {
           const deadline = setTimeout(() => reject(new Error('Navigation exceeded 1500 ms')), 1500);
           const check = () => {
-            if (location.hash === expected && document.querySelector('.nav [aria-current="page"]')?.textContent.trim() === (i % 2 ? 'Beranda' : 'Semua sepatu')) {
+            if (location.pathname === expected && document.querySelector('.nav [aria-current="page"]')?.textContent.trim() === (i % 2 ? 'Beranda' : 'Semua sepatu')) {
               clearTimeout(deadline);
               resolve();
             } else requestAnimationFrame(check);
@@ -38,10 +38,10 @@ try {
     await page.evaluate(() => document.querySelector('.cart-button').click());
     await page.waitForSelector('.cart-page');
     await page.goBack();
-    await page.waitForFunction(() => location.hash === '#home' && document.querySelector('.hero'));
+    await page.waitForFunction(() => location.pathname === '/' && document.querySelector('.hero'));
     await page.goForward();
     await page.waitForSelector('.cart-page');
-    assert.equal(await page.evaluate(() => location.hash), '#cart');
+    assert.equal(await page.evaluate(() => location.pathname), '/cart');
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({width, navigationMs: timings, lazyCartAndHistory: 'passed'}));
     await page.close();

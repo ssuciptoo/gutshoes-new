@@ -5,7 +5,9 @@ import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import {cartKey, mapServerCart} from "./lib/cart";
 import {initialGuestOrders, recoveryReference, sanitizeGuestReference, validGuestReference, writeGuestOrders} from "./lib/guestOrders";
-import {isProtectedStorefrontRoute, readRoute, renderStorefrontRoute, routeHash, routeTitle} from "./routes";
+import {isProtectedStorefrontRoute, legacyHashUrl, readRoute, renderStorefrontRoute, routeSeo, routeUrl} from "./routes";
+import {applySeo, organizationJsonLd} from "./lib/seo";
+import {useStoreInfo} from "./lib/storeInfo";
 import {useCatalog} from "./lib/useCatalog";
 
 const AdminPanel = lazy(() => import("./ProtectedAdmin"));
@@ -49,8 +51,17 @@ function writeLastOrder(order) {
   }
 }
 
+// Alamat lama berbentuk /#product/… dialihkan sekali saat aplikasi dimuat.
+function initialRoute() {
+  const migrated = legacyHashUrl();
+  if (migrated) window.history.replaceState(null, "", migrated);
+  return readRoute();
+}
+
+const currentUrl = () => window.location.pathname + window.location.search;
+
 export default function App() {
-  const [route, setRoute] = useState(() => readRoute());
+  const [route, setRoute] = useState(initialRoute);
   const {page, data: pageData} = route;
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState([]);
@@ -59,7 +70,8 @@ export default function App() {
       ? {...recoveryReference, customerType: "guest"}
       : withGuestToken(readLastOrder()),
   );
-  const [returnTo, setReturnTo] = useState("profile");
+  // Alamat lengkap tujuan setelah login, mis. /orders/GS-123.
+  const [returnTo, setReturnTo] = useState("/profile");
   const [guestOrders, setGuestOrders] = useState(initialGuestOrders);
   const [guestCartToken, setGuestCartToken] = useState(
     () => sessionStorage.getItem("gutshoes-guest-cart") || "",
@@ -135,50 +147,70 @@ export default function App() {
       active = false;
     };
   }, [authKey]);
+  // Tombol back/forward browser. Perubahan hash saja (mis. tautan "Lewati ke konten" #main)
+  // tidak dianggap pindah halaman.
+  const lastUrl = useRef(currentUrl());
   useEffect(() => {
     const sync = () => {
+      if (currentUrl() === lastUrl.current) return;
+      lastUrl.current = currentUrl();
       setRoute(readRoute());
       window.scrollTo({top: 0, behavior: "instant"});
     };
-    window.addEventListener("hashchange", sync);
     window.addEventListener("popstate", sync);
-    if (!window.location.hash) window.history.replaceState(null, "", "#home");
-    return () => {
-      window.removeEventListener("hashchange", sync);
-      window.removeEventListener("popstate", sync);
-    };
+    return () => window.removeEventListener("popstate", sync);
   }, []);
   useEffect(() => {
     if (sessionReady && isProtectedStorefrontRoute(page) && !user) {
-      setReturnTo(page);
-      window.location.hash = "#login";
+      setReturnTo(currentUrl());
+      navigate("login", {}, {replace: true});
     }
   }, [page, user, sessionReady]);
   // Pelanggan yang sudah masuk tidak perlu melihat halaman login lagi.
   useEffect(() => {
     if (sessionReady && page === "login" && user && user.role !== "ADMIN") {
-      window.location.hash = `#${returnTo || "profile"}`;
+      navigateUrl(returnTo || "/profile", {replace: true});
     }
   }, [page, user, sessionReady, returnTo]);
+  // Halaman produk dan kategori (/catalog?filter=…) mengatur tag SEO-nya sendiri.
+  const storeInfo = useStoreInfo();
   useEffect(() => {
-    if (page !== "product") document.title = routeTitle(route);
-  }, [route, page]);
+    if (page === "product" || (page === "catalog" && route.data.filter)) return;
+    const seo = routeSeo(route);
+    applySeo(page === "home" ? {...seo, jsonLd: organizationJsonLd(storeInfo)} : seo);
+  }, [route, page, storeInfo]);
   useEffect(() => {
     mainRef.current?.focus({preventScroll: true});
   }, [page]);
-  const navigate = (next, data = {}) => {
-    const target = routeHash(next, data);
-    if (window.location.hash === target) {
+  // replace: true untuk pengalihan otomatis (mis. ke halaman login) agar tidak menambah riwayat.
+  const navigate = (next, data = {}, options = {}) => navigateUrl(routeUrl(next, data), options);
+  function navigateUrl(target, {replace = false} = {}) {
+    if (currentUrl() !== target) {
+      // Commit immediately: waiting for animation frames inside a view-transition
+      // snapshot can stall navigation until the browser times the transition out.
+      window.history[replace ? "replaceState" : "pushState"](null, "", target);
+    }
+    lastUrl.current = currentUrl();
+    setRoute(readRoute());
+    window.scrollTo({top: 0, behavior: "instant"});
+  }
+  // Tautan biasa <a href="/catalog"> di dalam toko dibuka tanpa memuat ulang halaman.
+  useEffect(() => {
+    const onClick = (event) => {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const anchor = event.target.closest?.("a[href]");
+      if (!anchor || anchor.target || anchor.hasAttribute("download")) return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname && url.hash && url.search === window.location.search) return;
+      event.preventDefault();
+      if (url.pathname + url.search !== currentUrl()) window.history.pushState(null, "", url.pathname + url.search);
+      lastUrl.current = currentUrl();
       setRoute(readRoute());
       window.scrollTo({top: 0, behavior: "instant"});
-      return;
-    }
-    // Commit immediately: waiting for animation frames inside a view-transition
-    // snapshot can stall navigation until the browser times the transition out.
-    window.history.pushState(null, "", target);
-    setRoute(readRoute(target));
-    window.scrollTo({top: 0, behavior: "instant"});
-  };
+    };
+    document.addEventListener("click", onClick);
+    return () => document.removeEventListener("click", onClick);
+  }, []);
   const applyServerCart = (payload) => {
     const token = payload.guest_token || "";
     setCart(mapServerCart(payload));
@@ -327,7 +359,7 @@ export default function App() {
       writeLastOrder(null);
       setUser(null);
       setAddresses([]);
-      setReturnTo("profile");
+      setReturnTo("/profile");
       navigate("home");
     } catch (error) {
       setSessionError(error.message || "Keluar akun belum berhasil. Coba lagi.");
