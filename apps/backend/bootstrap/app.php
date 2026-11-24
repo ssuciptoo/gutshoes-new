@@ -3,8 +3,8 @@
 use App\Domain\Order\IdempotencyConflict;
 use App\Domain\Payment\InvalidWebhookSignature;
 use App\Http\Middleware\AssignRequestId;
-use App\Http\Middleware\AuthenticateClerkToken;
 use App\Http\Middleware\AuditAdminMutation;
+use App\Http\Middleware\AuthenticateClerkToken;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -77,6 +77,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 },
                 'errors' => $exception instanceof ValidationException ? $exception->errors() : (object) [],
                 'request_id' => $request->attributes->get('request_id'),
-            ], $status);
+            ], $status, $exception instanceof HttpExceptionInterface ? $exception->getHeaders() : []);
         });
     })->create();

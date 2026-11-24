@@ -21,6 +21,8 @@ ENV APP_ENV=production \
 
 RUN install-php-extensions \
         bcmath \
+        exif \
+        gd \
         intl \
         mbstring \
         opcache \

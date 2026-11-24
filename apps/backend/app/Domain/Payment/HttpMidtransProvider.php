@@ -48,8 +48,9 @@ class HttpMidtransProvider implements MidtransProvider
         $client = Http::withBasicAuth((string) config('services.midtrans.server_key'), '')->acceptJson()->timeout(10);
         $response = $client->get($url.'/status');
         if ($response->status() === 404 || (string) $response->json('status_code') === '404') {
-            $token = $order->payment?->snap_token;
-            if (! $token) {
+            $payment = $order->payment;
+            $token = $payment?->snap_token;
+            if (! $payment || ! $token) {
                 throw new RuntimeException('Payment initialization is uncertain; keep the reservation for reconciliation.');
             }
             // Snap API memakai Basic auth (server key + ":"), sama seperti saat membuat transaksi.
@@ -59,9 +60,8 @@ class HttpMidtransProvider implements MidtransProvider
             $alreadyClosed = in_array('token already canceled', $messages, true);
             // Sesi Snap yang sudah lewat masa berlakunya tidak bisa dibatalkan, tetapi juga tidak bisa
             // dipakai membayar lagi. Hanya diterima bila batas bayar kita sendiri memang sudah lewat.
-            $paymentDeadline = $order->payment?->expires_at ?? $order->expires_at;
             $sessionExpired = in_array('expiry must be greater than the current time', $messages, true)
-                && $paymentDeadline !== null && Carbon::parse($paymentDeadline)->isPast();
+                && $payment->expires_at->isPast();
             if (! ($snap->successful() && $snap->json('canceled_at')) && ! $alreadyClosed && ! $sessionExpired) {
                 throw new RuntimeException('Snap session closure is not confirmed.');
             }

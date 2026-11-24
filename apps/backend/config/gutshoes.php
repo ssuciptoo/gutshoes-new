@@ -1,6 +1,11 @@
 <?php
 
 return [
+    // Proxy/load balancer yang boleh mengirim X-Forwarded-* (IP/CIDR dipisah koma, atau "*" bila app
+    // hanya bisa dijangkau lewat proxy). Kosong = header itu diabaikan sehingga IP klien tidak bisa
+    // dipalsukan; tetapi di belakang proxy, rate limit per IP akan memakai IP proxy.
+    'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))))),
+
     'shipping_driver' => env('SHIPPING_DRIVER', 'fake'),
     'tracking_driver' => env('TRACKING_DRIVER', env('SHIPPING_DRIVER', 'fake')),
     // 0 disables caching. Rates may be up to this many minutes old at checkout.

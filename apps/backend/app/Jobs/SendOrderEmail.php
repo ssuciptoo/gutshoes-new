@@ -73,7 +73,7 @@ class SendOrderEmail implements ShouldQueue
         $accountUrl = $order->user_id ? $store.'orders/'.rawurlencode($order->order_number) : null;
         $recoveryUrl = $order->user_id ? null : $guestAccess->recoveryUrl($order);
         $orderUrl = $accountUrl ?? $recoveryUrl;
-        $deadline = $order->expires_at ? $order->expires_at->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d F Y, H.i').' WIB' : null;
+        $deadline = $order->expires_at->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d F Y, H.i').' WIB';
 
         return match ($this->template) {
             'order_created' => ['headline' => 'Pesananmu sudah kami terima',

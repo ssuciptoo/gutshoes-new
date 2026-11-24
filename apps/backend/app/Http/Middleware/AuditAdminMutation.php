@@ -39,6 +39,7 @@ class AuditAdminMutation
             }
         }
 
-        return [$segments[0] ?? '', $entityId];
+        // explode() selalu mengembalikan minimal satu elemen (string kosong untuk path "api/v1/admin").
+        return [$segments[0], $entityId];
     }
 }

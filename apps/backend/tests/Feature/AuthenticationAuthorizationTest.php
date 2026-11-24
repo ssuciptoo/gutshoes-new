@@ -2,7 +2,10 @@
 
 use App\Enums\UserRole;
 use App\Models\Address;
+use App\Models\Order;
 use App\Models\User;
+use App\Models\Warehouse;
+use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -18,6 +21,31 @@ it('authenticates an administrator and rotates the session', function () {
     $this->postJson('/api/v1/admin/auth/login', ['email' => $admin->email, 'password' => 'Strong!Password123'])
         ->assertOk()->assertJsonPath('data.role', UserRole::ADMIN->value);
     $this->assertAuthenticatedAs($admin);
+});
+
+it('locks an administrator email after repeated failed logins until the lockout clears', function () {
+    $admin = User::factory()->admin()->create(['password' => Hash::make('Strong!Password123')]);
+    foreach (range(1, 5) as $attempt) {
+        $this->postJson('/api/v1/admin/auth/login', ['email' => $admin->email, 'password' => 'wrong-password'])->assertUnprocessable();
+    }
+
+    // Kata sandi benar pun ditolak selama terkunci, dan huruf besar tidak melewati kunci.
+    $this->postJson('/api/v1/admin/auth/login', ['email' => strtoupper($admin->email), 'password' => 'Strong!Password123'])
+        ->assertStatus(429)->assertHeader('Retry-After')->assertJsonPath('code', 'RATE_LIMIT_EXCEEDED');
+    $this->assertGuest();
+
+    $this->travel(16)->minutes();
+    $this->postJson('/api/v1/admin/auth/login', ['email' => $admin->email, 'password' => 'Strong!Password123'])->assertOk();
+});
+
+it('answers unknown and existing admin emails the same way', function () {
+    User::factory()->admin()->create(['email' => 'admin@example.test', 'password' => Hash::make('Strong!Password123')]);
+    $known = $this->postJson('/api/v1/admin/auth/login', ['email' => 'admin@example.test', 'password' => 'wrong-password']);
+    $unknown = $this->postJson('/api/v1/admin/auth/login', ['email' => 'nobody@example.test', 'password' => 'wrong-password']);
+
+    $known->assertUnprocessable();
+    $unknown->assertUnprocessable();
+    expect($unknown->json('errors'))->toBe($known->json('errors'));
 });
 
 it('prevents customers from reading another customer address', function () {
@@ -45,10 +73,10 @@ function rsaKeyOptions(): array
     static $config = null;
     if ($config === null) {
         $config = tempnam(sys_get_temp_dir(), 'ossl');
-        file_put_contents($config, "[req]
+        file_put_contents($config, '[req]
 distinguished_name=dn
 [dn]
-");
+');
     }
 
     return ['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA, 'config' => $config];
@@ -76,7 +104,7 @@ function configureClerk(): void
 
 function clerkToken(string $sub = 'user_clerk_1', array $overrides = []): string
 {
-    return Firebase\JWT\JWT::encode(array_merge([
+    return JWT::encode(array_merge([
         'sub' => $sub, 'iss' => 'https://clerk.example.test', 'azp' => 'http://localhost:5173',
         'iat' => time(), 'nbf' => time() - 5, 'exp' => time() + 60, 'sid' => 'sess_1',
     ], $overrides), clerkKeys()['private'], 'RS256');
@@ -139,7 +167,7 @@ it('rejects Clerk tokens that are expired, from another origin, another issuer o
     $this->withToken(clerkToken('user_clerk_1', ['iss' => 'https://other.clerk.test']))->getJson('/api/v1/auth/me')->assertUnauthorized();
     $other = openssl_pkey_new(rsaKeyOptions());
     openssl_pkey_export($other, $otherPrivate, null, rsaKeyOptions());
-    $forged = Firebase\JWT\JWT::encode(['sub' => 'user_clerk_1', 'iss' => 'https://clerk.example.test', 'exp' => time() + 60], $otherPrivate, 'RS256');
+    $forged = JWT::encode(['sub' => 'user_clerk_1', 'iss' => 'https://clerk.example.test', 'exp' => time() + 60], $otherPrivate, 'RS256');
     $this->withToken($forged)->getJson('/api/v1/auth/me')->assertUnauthorized();
 
     expect(User::count())->toBe(0);
@@ -152,9 +180,9 @@ it('never lets a Clerk token act on admin endpoints', function () {
     $this->withToken(clerkToken())->getJson('/api/v1/admin/dashboard')->assertUnauthorized();
 });
 
-function guestOrderFor(string $email): App\Models\Order
+function guestOrderFor(string $email): Order
 {
-    return App\Models\Order::create(['order_number' => 'GS-G-'.fake()->unique()->numerify('######'), 'warehouse_id' => App\Models\Warehouse::factory()->create()->id,
+    return Order::create(['order_number' => 'GS-G-'.fake()->unique()->numerify('######'), 'warehouse_id' => Warehouse::factory()->create()->id,
         'customer_email' => $email, 'customer_name' => 'Buyer', 'customer_phone' => '08123', 'status' => 'PENDING_PAYMENT',
         'subtotal' => '100000.00', 'shipping_fee' => '10000.00', 'grand_total' => '110000.00', 'currency' => 'IDR',
         'idempotency_key' => fake()->uuid(), 'payload_hash' => str_repeat('a', 64), 'expires_at' => now()->addDay()]);

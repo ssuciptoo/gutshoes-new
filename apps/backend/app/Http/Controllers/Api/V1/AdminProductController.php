@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Catalog\ImageSanitizer;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
@@ -82,10 +83,10 @@ class AdminProductController extends Controller
         return response()->json(['data' => $product]);
     }
 
-    public function uploadImage(Request $request, Product $product): JsonResponse
+    public function uploadImage(Request $request, Product $product, ImageSanitizer $images): JsonResponse
     {
         $data = $request->validate(['image' => ['required', 'image', 'mimes:jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300,max_width=4000,max_height=4000'], 'alt_text' => ['nullable', 'string', 'max:255'], 'is_primary' => ['sometimes', 'boolean']]);
-        $path = $data['image']->store("products/{$product->id}", 'public');
+        $path = $images->store($data['image'], "products/{$product->id}");
         if ($data['is_primary'] ?? false) {
             $product->images()->update(['is_primary' => false]);
         }

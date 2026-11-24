@@ -18,6 +18,7 @@ use App\Models\ProductVariant;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 
 uses(RefreshDatabase::class);
 
@@ -231,13 +232,13 @@ it('leaves fresh, expired and unknown payments alone during reconciliation', fun
 it('sends Snap a finish URL back to the order without exposing the guest token', function () {
     config(['services.storefront.url' => 'https://toko.test/']);
     ['order' => $order] = payableOrder();
-    Illuminate\Support\Facades\Http::fake(['*' => Illuminate\Support\Facades\Http::response(['token' => 'snap-token', 'redirect_url' => 'https://pay.test/x'])]);
+    Http::fake(['*' => Http::response(['token' => 'snap-token', 'redirect_url' => 'https://pay.test/x'])]);
 
     (new HttpMidtransProvider)->createSnapTransaction($order);
     $order->update(['user_id' => User::factory()->create()->id]);
     (new HttpMidtransProvider)->createSnapTransaction($order->refresh());
 
-    $finishUrls = Illuminate\Support\Facades\Http::recorded()->map(fn ($pair) => $pair[0]['callbacks']['finish'] ?? null)->all();
+    $finishUrls = Http::recorded()->map(fn ($pair) => $pair[0]['callbacks']['finish'] ?? null)->all();
     expect($finishUrls)->toBe(['https://toko.test/guest-orders', 'https://toko.test/orders/'.$order->order_number])
         ->and(implode(' ', $finishUrls))->not->toContain((string) $order->guest_access_token);
 });

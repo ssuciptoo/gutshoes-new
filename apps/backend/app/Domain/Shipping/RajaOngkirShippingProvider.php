@@ -65,7 +65,7 @@ class RajaOngkirShippingProvider implements ShippingProvider
      * "SiCepat Reguler", "POS Reguler", "JNE YES Dalam Kota". Untuk POS, RajaOngkir menaruh kode
      * di description ("240") dan nama di service ("Pos Reguler"), jadi kode seperti itu diabaikan.
      *
-     * @param array<string, mixed> $rate
+     * @param  array<string, mixed>  $rate
      */
     private function label(array $rate): string
     {

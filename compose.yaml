@@ -8,7 +8,7 @@ services:
       MYSQL_PASSWORD: local-development-only
       MYSQL_ROOT_PASSWORD: local-root-development-only
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - gutshoes-mysql:/var/lib/mysql
     healthcheck:
@@ -21,7 +21,7 @@ services:
     image: redis:7.4-alpine
     command: redis-server --appendonly yes
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     volumes:
       - gutshoes-redis:/data
     healthcheck:
@@ -33,8 +33,8 @@ services:
   mailpit:
     image: axllent/mailpit:v1.27
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
 volumes:
   gutshoes-mysql:

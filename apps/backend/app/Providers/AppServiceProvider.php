@@ -20,6 +20,7 @@ use App\Domain\Shipping\ShipmentTracker;
 use App\Domain\Shipping\ShippingAreaMapper;
 use App\Domain\Shipping\ShippingProvider;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
@@ -56,6 +57,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $proxies = (array) config('gutshoes.trusted_proxies');
+        if ($proxies !== []) {
+            TrustProxies::at($proxies === ['*'] ? '*' : $proxies);
+        }
+
         RateLimiter::for('health', fn (Request $request) => Limit::perMinute(30)->by($request->ip()));
         RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
             ->by($request->user()?->getAuthIdentifier() ?? $request->ip()));

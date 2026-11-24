@@ -162,7 +162,7 @@ it('includes recent orders and 30 day revenue on the dashboard and the stock thr
     $this->actingAs($admin)->getJson('/api/v1/admin/inventories')->assertOk()->assertJsonPath('meta.low_stock_threshold', 5);
 });
 
-function adminTestOrder(string $status, \DateTimeInterface $expiresAt): Order
+function adminTestOrder(string $status, DateTimeInterface $expiresAt): Order
 {
     return Order::create(['order_number' => 'GS-A-'.fake()->unique()->numerify('######'), 'warehouse_id' => Warehouse::factory()->create()->id,
         'customer_email' => 'buyer@example.test', 'customer_name' => 'Buyer', 'customer_phone' => '08123', 'status' => $status,
@@ -221,7 +221,7 @@ it('saves many configuration values atomically in one request', function () {
     $this->actingAs($admin)->putJson('/api/v1/admin/configurations', ['values' => [
         'store_legal_name' => 'PT Uji', 'store_email' => 'salah',
     ]])->assertUnprocessable()->assertJsonValidationErrors('values.store_email');
-    expect(App\Models\StoreConfiguration::count())->toBe(0);
+    expect(StoreConfiguration::count())->toBe(0);
 
     $this->actingAs($admin)->putJson('/api/v1/admin/configurations', ['values' => [
         'store_legal_name' => 'PT Uji', 'store_email' => 'cs@uji.test', 'store_version' => null, 'low_stock_threshold' => 4,

@@ -5,6 +5,7 @@ use App\Domain\Payment\MidtransProvider;
 use App\Jobs\SendOrderEmail;
 use App\Models\EmailDelivery;
 use App\Models\Order;
+use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
@@ -71,7 +72,7 @@ it('retries an order email without delivering it twice', function () {
 it('renders a clean order email with HTML and plain text versions', function () {
     config(['mail.default' => 'array', 'services.storefront.url' => 'https://toko.test']);
     $warehouse = Warehouse::factory()->create();
-    $customer = App\Models\User::factory()->create();
+    $customer = User::factory()->create();
     $order = Order::create(['order_number' => 'GS-MAIL-0002', 'user_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'customer_email' => 'mail2@example.test', 'customer_name' => 'Rina', 'customer_phone' => '08123',
         'status' => 'PENDING_PAYMENT', 'subtotal' => '449000.00', 'product_discount' => '0.00', 'voucher_discount' => '0.00', 'shipping_fee' => '8000.00', 'grand_total' => '457000.00',
         'currency' => 'IDR', 'idempotency_key' => 'mail-key-0000000002', 'payload_hash' => str_repeat('f', 64), 'expires_at' => '2026-11-24 08:01:02']);

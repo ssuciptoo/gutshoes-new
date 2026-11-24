@@ -120,6 +120,48 @@ it('validates and stores product images on the public disk', function () {
     Storage::disk('public')->assertExists($response->json('data.path'));
 });
 
+it('re-encodes uploaded images to webp and drops appended payloads', function () {
+    Storage::fake('public');
+    $admin = User::factory()->admin()->create();
+    $product = Product::factory()->create();
+    $image = imagecreatetruecolor(400, 400);
+    ob_start();
+    imagejpeg($image);
+    $jpeg = ob_get_clean().'<?php echo "polyglot"; ?>';
+    $file = UploadedFile::fake()->createWithContent('shoe.jpg', $jpeg);
+
+    $response = $this->actingAs($admin)->post('/api/v1/admin/products/'.$product->id.'/images', ['image' => $file], ['Accept' => 'application/json']);
+
+    $response->assertCreated();
+    $path = $response->json('data.path');
+    expect($path)->toEndWith('.webp');
+    $stored = Storage::disk('public')->get($path);
+    expect(substr($stored, 8, 4))->toBe('WEBP')->and($stored)->not->toContain('<?php');
+});
+
+it('re-encodes previously uploaded product images and removes the originals', function () {
+    Storage::fake('public');
+    $product = Product::factory()->create();
+    $image = imagecreatetruecolor(400, 400);
+    ob_start();
+    imagejpeg($image);
+    $old = "products/{$product->id}/legacy.jpg";
+    Storage::disk('public')->put($old, ob_get_clean().'<?php echo "polyglot"; ?>');
+    $record = $product->images()->create(['path' => $old, 'is_primary' => true, 'position' => 1]);
+    $missing = $product->images()->create(['path' => "products/{$product->id}/gone.jpg", 'is_primary' => false, 'position' => 2]);
+
+    $this->artisan('gutshoes:sanitize-product-images', ['--dry-run' => true])->assertSuccessful();
+    expect($record->refresh()->path)->toBe($old);
+
+    $this->artisan('gutshoes:sanitize-product-images')->assertSuccessful();
+
+    $path = $record->refresh()->path;
+    expect($path)->toStartWith("products/{$product->id}/")->toEndWith('.webp')
+        ->and(Storage::disk('public')->get($path))->not->toContain('<?php')
+        ->and($missing->refresh()->path)->toEndWith('gone.jpg');
+    Storage::disk('public')->assertMissing($old);
+});
+
 it('returns validation errors instead of a database exception for duplicate variant SKUs', function () {
     $admin = User::factory()->admin()->create();
     $brand = Brand::factory()->create();

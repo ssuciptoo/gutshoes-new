@@ -88,6 +88,6 @@ class CatalogController extends Controller
             'categories' => $product->categories->map->only(['name', 'slug'])->values(), 'images' => $product->images->map->only(['id', 'path', 'alt_text', 'is_primary'])->values(),
             'variants' => $product->variants->sortBy(fn ($v) => $v->size->sort_value ?? PHP_FLOAT_MAX)
                 ->map(fn ($v) => ['id' => $v->id, 'sku' => $v->sku, 'size' => $v->size->label, 'size_value' => $v->size->value, 'foot_length_cm' => $v->size->foot_length_cm, 'price' => (string) $v->price, 'currency' => $v->currency,
-                'weight_grams' => $v->weight_grams, 'available_stock' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)), 'sold_out' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)) === 0])->values()];
+                    'weight_grams' => $v->weight_grams, 'available_stock' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)), 'sold_out' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)) === 0])->values()];
     }
 }

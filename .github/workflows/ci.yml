@@ -23,12 +23,15 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
-          extensions: bcmath, dom, fileinfo, intl, mbstring, pdo_sqlite, pdo_mysql, pcntl, zip
+          extensions: bcmath, dom, exif, fileinfo, gd, intl, mbstring, pdo_sqlite, pdo_mysql, pcntl, zip
           coverage: none
           tools: composer:v2
 
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Audit dependencies
+        run: composer audit --no-interaction --locked
 
       - name: Prepare test environment
         run: |
@@ -64,6 +67,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Lint
         run: npm run lint
 
@@ -71,6 +77,7 @@ jobs:
         run: npm run build:staging
         env:
           VITE_API_URL: https://api-ci.invalid/api/v1
+          VITE_SITE_URL: https://ci.invalid
 
   docker:
     name: Build Docker images

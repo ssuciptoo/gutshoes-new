@@ -22,6 +22,7 @@ use App\Models\Warehouse;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -153,8 +154,8 @@ class AdminOperationsController extends Controller
     {
         $request->validate(['from' => ['nullable', 'date'], 'to' => ['nullable', 'date']]);
         $query = AuditLog::query()->with('admin:id,name,email');
-        $query->when($request->input('from'), fn (Builder $q, $from) => $q->where('created_at', '>=', \Illuminate\Support\Carbon::parse($from)->startOfDay()));
-        $query->when($request->input('to'), fn (Builder $q, $to) => $q->where('created_at', '<=', \Illuminate\Support\Carbon::parse($to)->endOfDay()));
+        $query->when($request->input('from'), fn (Builder $q, $from) => $q->where('created_at', '>=', Carbon::parse($from)->startOfDay()));
+        $query->when($request->input('to'), fn (Builder $q, $to) => $q->where('created_at', '<=', Carbon::parse($to)->endOfDay()));
 
         return $this->listing($query, $request, ['admin_id', 'action', 'entity_type'], 'created_at', ['action', 'entity_type', 'description']);
     }
@@ -339,6 +340,7 @@ class AdminOperationsController extends Controller
     /**
      * @param Builder<*> $query
      * @param  list<string>  $filters
+     * @param  list<string>  $searchable
      */
     private function listing(Builder $query, Request $request, array $filters, string $defaultSort, array $searchable = []): JsonResponse
     {
