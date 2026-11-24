@@ -17,6 +17,70 @@ Ganti `domain-anda.com` di seluruh panduan dengan domain Anda.
 
 ---
 
+## 0. Jalur cepat: satu VPS Ubuntu 24.04 (1 vCPU / 2 GB)
+
+Semua file siap pakai ada di [`deploy/staging/`](../deploy/staging): `compose.yaml` (Caddy + HTTPS
+otomatis, API, Horizon, scheduler, storefront, MySQL, Redis, semuanya dengan batas memori),
+`bootstrap.sh` (menyiapkan server), dan `deploy.sh` (deploy, backup, status). Image dibangun oleh
+GitHub Actions; VPS hanya menarik image jadi.
+
+**A. Sekali di GitHub**
+
+1. Push ke `main`. Setelah CI hijau, workflow **Publish staging images** mengirim image backend ke
+   `ghcr.io/<owner>/gutshoes-backend:staging`.
+2. Buat environment: *Settings → Environments → New environment* bernama `staging`, lalu tambahkan
+   **Variables** (bukan Secrets, karena nilainya ikut ke bundle browser):
+   - `STAGING_DOMAIN`: domain induk, mis. `gutshoes.id` (toko `staging.gutshoes.id`, API `api-staging.gutshoes.id`)
+   - `STAGING_CLERK_PUBLISHABLE_KEY`: `pk_test_…` dari instance Clerk staging
+
+   Setelah keduanya terisi, jalankan ulang workflow (*Actions → Publish staging images → Run workflow*)
+   agar image storefront ikut dibangun.
+3. Buat token untuk VPS: *Settings (akun) → Developer settings → Personal access tokens (classic)*,
+   centang hanya `read:packages`. Token ini dipakai `docker login` di VPS.
+
+**B. DNS** (di penyedia domain): dua record **A** `staging` dan `api-staging` ke IP VPS. Tunggu
+sampai `nslookup api-staging.<domain>` menampilkan IP VPS sebelum langkah D, agar Caddy bisa
+mendapat sertifikat HTTPS.
+
+**C. Sekali di VPS** (dari laptop, di root repo):
+
+```bash
+scp -r deploy/staging root@IP_VPS:/opt/gutshoes
+ssh root@IP_VPS 'bash /opt/gutshoes/bootstrap.sh'
+```
+
+`bootstrap.sh` memasang Docker, swap 2 GB, firewall (SSH/80/443), update keamanan otomatis, backup
+database harian, dan membuat `/opt/gutshoes/.env` + `/opt/gutshoes/backend.env` dengan password
+MySQL/Redis dan `APP_KEY` acak.
+
+**D. Isi konfigurasi lalu deploy** (di VPS):
+
+```bash
+nano /opt/gutshoes/.env           # STAGING_DOMAIN, ACME_EMAIL
+nano /opt/gutshoes/backend.env    # SMTP, Midtrans sandbox, RajaOngkir, Clerk (lihat bagian 2)
+docker login ghcr.io -u <username-github>          # password = token dari langkah A.3
+/opt/gutshoes/deploy.sh deploy
+/opt/gutshoes/deploy.sh admin     # buat akun admin
+```
+
+Setelah image storefront tersedia, isi `COMPOSE_PROFILES=storefront` di `/opt/gutshoes/.env` lalu
+jalankan `deploy.sh deploy` lagi. Lanjutkan ke bagian 5 (dashboard Midtrans/Clerk) dan 6 (smoke test).
+
+**Operasi harian**
+
+| Perintah | Fungsi |
+|---|---|
+| `deploy.sh deploy` | Tarik image `staging` terbaru, migrasi, jalankan ulang layanan |
+| `deploy.sh deploy <hash-commit>` | Deploy/rollback ke commit tertentu (tag 12 karakter dari ringkasan workflow) |
+| `deploy.sh status` | Status container, health API, pemakaian RAM |
+| `deploy.sh logs api` | Log satu layanan (`api`, `horizon`, `scheduler`, `caddy`, `mysql`) |
+| `deploy.sh backup` | Backup database manual ke `/opt/gutshoes/backups` |
+| `deploy.sh check` | Cek konfigurasi Midtrans sandbox |
+
+Bagian 1–4 di bawah menjelaskan detail dan alternatif (mis. platform selain VPS).
+
+---
+
 ## 1. Yang perlu disiapkan
 
 ### 1.1 Infrastruktur
@@ -142,11 +206,12 @@ docker build --file apps/storefront/Dockerfile \
 
 ### 4.1 Contoh Docker Compose
 
-Contoh untuk satu VPS. MySQL, Redis, dan reverse proxy TLS diasumsikan sudah ada (managed service
-atau container terpisah). Sesuaikan dengan platform Anda.
+Untuk VPS tunggal, pakai file lengkap di [`deploy/staging/compose.yaml`](../deploy/staging/compose.yaml)
+(bagian 0). Contoh ringkas di bawah untuk platform lain, dengan asumsi MySQL, Redis, dan reverse
+proxy TLS sudah tersedia terpisah.
 
 ```yaml
-# compose.staging.yaml (contoh, tidak disimpan di repo)
+# Contoh ringkas; versi lengkap untuk VPS: deploy/staging/compose.yaml
 x-backend: &backend
   image: registry.example/gutshoes-backend:<commit>
   env_file: /etc/gutshoes/staging.env   # file secret di server, permission 600

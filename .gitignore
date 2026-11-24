@@ -62,3 +62,7 @@ GoogleService-Info.plist
 secrets/
 apps/*/secrets/
 storage/oauth-*.key
+
+# Staging VPS (deploy/staging): file berisi secret dan backup database
+deploy/staging/backend.env
+deploy/staging/backups/
