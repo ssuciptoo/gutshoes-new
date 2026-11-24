@@ -1,6 +1,7 @@
 import React from "react";
 import logoGutShoes from "../../assets/logo-gutshoes.webp";
 import {copyrightText, useStoreInfo, whatsappUrl} from "../../lib/storeInfo";
+import {RETURNS_TITLE} from "../../lib/features";
 
 function Footer() {
   const info = useStoreInfo();
@@ -30,7 +31,7 @@ function Footer() {
         <strong>Bantuan</strong>
         <a href="/tracking">Lacak pesanan</a>
         <a href="/size-guide">Panduan ukuran</a>
-        <a href="/returns">Pengembalian & refund</a>
+        <a href="/returns">{RETURNS_TITLE}</a>
         <a href="/contact">Hubungi kami</a>
         <a href="/guest-orders">Pesanan tanpa akun</a>
       </div>

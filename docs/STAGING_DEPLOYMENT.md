@@ -392,25 +392,54 @@ Yang terasa lambat di 1 vCPU: login (bcrypt), upload gambar besar (encode ulang 
 data wilayah pertama kali (beberapa menit). Untuk production, mulai dari **2 vCPU / 4 GB** dengan
 database terpisah.
 
-## 7. Deploy berikutnya
+## 7. Deploy berikutnya (update kode ke staging)
 
-1. Pastikan commit sudah lulus CI, lalu build dan push image dengan tag baru.
-2. `docker compose run --rm api composer deploy:database`
-3. Ganti tag image di compose, lalu `docker compose up -d`. Horizon menyelesaikan job berjalan
-   sebelum berhenti (`stop_grace_period`).
-4. Ulangi smoke test singkat (health, login, satu checkout sandbox).
+Alur normal untuk perubahan kode aplikasi (`apps/backend`, `apps/storefront`):
+
+1. **Push ke `main`** (langsung, atau merge pull request).
+2. **Tunggu GitHub Actions hijau:** workflow **CI** (test, lint, build), lalu **Publish staging
+   images** otomatis membangun image baru dan memindahkan tag `staging` ke commit itu. Bila CI merah,
+   image tidak dibangun dan staging tetap memakai versi lama.
+3. **Di VPS:**
+
+   ```bash
+   sudo /opt/gutshoes/deploy.sh deploy
+   ```
+
+   Ini menarik image terbaru, menjalankan migrasi database baru (bila ada), lalu menyalakan ulang
+   API, Horizon, scheduler, dan storefront. Job antrean yang sedang berjalan diselesaikan dulu.
+4. **Cek singkat:** `sudo /opt/gutshoes/deploy.sh status`, buka toko, login, dan coba fitur yang diubah.
+
+Jenis perubahan lain:
+
+| Yang berubah | Yang perlu dilakukan |
+|---|---|
+| Kode backend/storefront | Langkah 1–4 di atas |
+| Isi `backend.env` (kunci, SMTP, dll.) | Edit di VPS (`sudo nano /opt/gutshoes/backend.env`), lalu `deploy.sh deploy` agar konfigurasi dibaca ulang |
+| File di `deploy/staging/` (`compose.yaml`, `Caddyfile`, `deploy.sh`, `mysql.cnf`) | File di VPS tidak ikut ter-update oleh push. Salin file yang berubah saja (jangan seluruh folder, agar `.env`/`backend.env` aman), lalu `deploy.sh deploy`. Untuk `deploy.sh`, pulihkan izin eksekusi dengan `sudo chmod 700 /opt/gutshoes/deploy.sh` |
+| Variable GitHub (`STAGING_DOMAIN`, kunci Clerk) | Nilai ini tertanam di bundle storefront: jalankan ulang workflow **Publish staging images** (*Run workflow*), lalu `deploy.sh deploy` |
+| `bootstrap.sh` | Hanya untuk server baru; tidak perlu dijalankan ulang |
+
+Contoh menyalin satu file dari laptop (PowerShell, di root repo):
+
+```powershell
+scp deploy/staging/compose.yaml root@IP_VPS:/opt/gutshoes/compose.yaml
+```
 
 Satu kali setelah deploy yang membawa sanitasi gambar (hanya bila database staging berisi gambar
 yang diunggah sebelum fitur itu ada):
 
 ```bash
-docker compose -f compose.staging.yaml run --rm api php artisan gutshoes:sanitize-product-images --dry-run
-docker compose -f compose.staging.yaml run --rm api php artisan gutshoes:sanitize-product-images
+cd /opt/gutshoes
+sudo docker compose run --rm --no-deps api php artisan gutshoes:sanitize-product-images --dry-run
+sudo docker compose run --rm --no-deps api php artisan gutshoes:sanitize-product-images
 ```
 
 ## 8. Rollback
 
-- Kembalikan tag image ke versi sebelumnya, lalu `docker compose up -d`.
+- Kembali ke commit yang terakhir baik: `sudo /opt/gutshoes/deploy.sh deploy <hash-12-karakter>`.
+  Hash ada di ringkasan run **Publish staging images** (setiap commit punya tag sendiri di GHCR).
+  `deploy.sh deploy` tanpa argumen kembali memakai tag `staging` (commit terbaru).
 - Migrasi tidak di-rollback otomatis; perbaiki maju (forward fix). Backup database dulu bila harus
   membalik migrasi.
 - Jangan mengubah status order langsung di database.

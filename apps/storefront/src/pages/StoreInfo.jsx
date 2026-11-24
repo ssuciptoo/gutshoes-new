@@ -3,7 +3,7 @@ import Button from "../components/ui/Button";
 import Icon from "../components/ui/Icon";
 import {formatFootLength} from "../lib/catalog";
 import {formatPolicyDate, returnDays, useStoreInfo, whatsappUrl} from "../lib/storeInfo";
-import {REFUNDS_ENABLED} from "../lib/features";
+import {REFUNDS_ENABLED, RETURNS_TITLE} from "../lib/features";
 
 // Halaman informasi toko: panduan ukuran, kontak, kebijakan privasi, syarat & ketentuan, dan pengembalian.
 // Data toko dikelola admin (Pengaturan). Isi kebijakan adalah draf umum; lihat lib/storeInfo.jsx.
@@ -181,7 +181,7 @@ const PAGES = {
     ),
   },
   returns: {
-    title: "Pengembalian & refund",
+    title: RETURNS_TITLE,
     intro: "Ukuran kurang pas atau produk bermasalah? Begini cara mengajukannya.",
     body: (info) => (
       <>

@@ -1,4 +1,4 @@
-import {REFUNDS_ENABLED} from "../lib/features";
+import {REFUNDS_ENABLED, RETURNS_DESCRIPTION, RETURNS_TITLE} from "../lib/features";
 
 const STOREFRONT_PAGES = new Set([
   "home",
@@ -47,7 +47,7 @@ const STOREFRONT_TITLES = {
   contact: "Hubungi kami",
   privacy: "Kebijakan privasi",
   terms: "Syarat & ketentuan",
-  returns: "Pengembalian & refund",
+  returns: RETURNS_TITLE,
   "size-guide": "Panduan ukuran sepatu",
   login: "Masuk ke akun",
   profile: "Profil saya",
@@ -195,7 +195,7 @@ const STOREFRONT_DESCRIPTIONS = {
   privacy: "Kebijakan privasi GutShoes: data apa yang kami kumpulkan, untuk apa dipakai, dan bagaimana kami melindunginya.",
   terms: "Syarat dan ketentuan berbelanja di GutShoes, termasuk pemesanan, pembayaran, dan pengiriman.",
   "size-guide": "Cara mengukur panjang kaki dan tabel konversi ukuran sepatu EU, UK, US, dan cm, plus tips memilih ukuran untuk lari, futsal, basket, dan anak.",
-  returns: "Ketentuan pengembalian barang dan refund di GutShoes: syarat, batas waktu, dan cara mengajukan.",
+  returns: RETURNS_DESCRIPTION,
 };
 
 export function isIndexable(page) {

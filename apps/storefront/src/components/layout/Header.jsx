@@ -1,11 +1,12 @@
 import React, {useEffect, useRef, useState} from "react";
 import logoGutShoes from "../../assets/logo-gutshoes.webp";
 import Icon from "../ui/Icon";
+import {RETURNS_TITLE} from "../../lib/features";
 
 const HELP_ITEMS = [
   {label: "Lacak pesanan", page: "tracking"},
   {label: "Panduan ukuran", page: "size-guide"},
-  {label: "Pengembalian & refund", page: "returns"},
+  {label: RETURNS_TITLE, page: "returns"},
   {label: "Hubungi kami", page: "contact"},
   {label: "Pesanan tanpa akun", page: "guest-orders"},
 ];
