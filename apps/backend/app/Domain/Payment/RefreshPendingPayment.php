@@ -26,7 +26,7 @@ class RefreshPendingPayment
     {
         $payment = $order->payment;
         if ($order->getRawOriginal('status') !== OrderStatus::PENDING_PAYMENT->value
-            || ! $order->expires_at || Carbon::parse($order->expires_at)->isPast()
+            || Carbon::parse($order->expires_at)->isPast()
             || ! $payment || $payment->provider !== 'MIDTRANS'
             || $payment->status !== PaymentStatus::PENDING->value || $payment->paid_at
             // Tanpa sesi Snap belum ada yang bisa dibayar, jadi tidak ada yang perlu ditanyakan.
