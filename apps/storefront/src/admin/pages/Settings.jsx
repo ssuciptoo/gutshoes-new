@@ -14,7 +14,9 @@ function SettingsPage() {
   return (
     <>
       <PageHead section="settings" />
-      <BackdropSettings />
+      <div className="adm-settings">
+        <BackdropSettings />
+      </div>
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
         <SettingsForm items={serverList(resource.data)} reload={resource.retry} />

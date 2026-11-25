@@ -175,11 +175,10 @@ function BackdropSettings() {
         Foto produk berlatar transparan (PNG/WebP) ditampilkan di atas template ini pada kartu katalog dan galeri detail.
         Foto berlatar penuh tetap tampil apa adanya. Kategori bisa memakai template sendiri lewat menu Katalog.
       </p>
-      <div className="adm-backdrop-list" role="list">
+      <div className="adm-backdrop-list" role="group" aria-label="Pilih template">
         {items.map((item) => (
           <button
             type="button"
-            role="listitem"
             key={item.id}
             className={form?.id === item.id ? "active" : ""}
             onClick={() => select(item)}

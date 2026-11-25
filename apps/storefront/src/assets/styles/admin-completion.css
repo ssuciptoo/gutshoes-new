@@ -715,9 +715,6 @@
   height: 16px;
   accent-color: var(--adm-action);
 }
-.adm-backdrops {
-  margin-bottom: 18px;
-}
 .adm-backdrop-list {
   display: flex;
   flex-wrap: wrap;
