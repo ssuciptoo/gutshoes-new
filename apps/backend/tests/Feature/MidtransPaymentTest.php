@@ -379,3 +379,38 @@ it('starts a new attempt after a failed charge without trying to close it', func
     expect($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
         ->and($inventory->refresh()->reserved)->toBe(1);
 });
+
+it('shows the paid status when the buyer returns from Midtrans before the webhook arrives', function () {
+    config(['services.midtrans.driver' => 'http', 'services.midtrans.server_key' => 'SB-Mid-server-test',
+        'services.midtrans.snap_url' => 'https://app.sandbox.midtrans.com/snap/v1/transactions',
+        'services.midtrans.api_url' => 'https://api.sandbox.midtrans.com/v2']);
+    Http::preventStrayRequests();
+    ['order' => $order, 'inventory' => $inventory] = payableOrder();
+    Http::fake([
+        'app.sandbox.midtrans.com/snap/v1/transactions' => Http::response(['token' => 'snap-token', 'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v4/redirection/snap-token']),
+        'api.sandbox.midtrans.com/v2/*/status' => Http::response(midtransPayload($order, 'settlement') + ['payment_type' => 'qris', 'fraud_status' => 'accept']),
+    ]);
+    app(\App\Domain\Payment\CreatePaymentService::class)->create($order);
+
+    // Tidak ada webhook: halaman pesanan sendiri yang menanyakan status ke Midtrans.
+    $this->getJson('/api/v1/guest/orders/'.$order->order_number)->assertOk()->assertJsonPath('data.status', 'PAID');
+    expect($order->payment->refresh()->status)->toBe('SUCCESS')
+        ->and($inventory->refresh()->sold)->toBe(1);
+});
+
+it('asks Midtrans at most once per cooldown while the order page is reopened', function () {
+    config(['services.midtrans.driver' => 'http', 'services.midtrans.server_key' => 'SB-Mid-server-test',
+        'services.midtrans.snap_url' => 'https://app.sandbox.midtrans.com/snap/v1/transactions',
+        'services.midtrans.api_url' => 'https://api.sandbox.midtrans.com/v2']);
+    Http::preventStrayRequests();
+    ['order' => $order] = payableOrder();
+    Http::fake([
+        'app.sandbox.midtrans.com/snap/v1/transactions' => Http::response(['token' => 'snap-token', 'redirect_url' => 'https://app.sandbox.midtrans.com/snap/v4/redirection/snap-token']),
+        'api.sandbox.midtrans.com/v2/*/status' => Http::response(['status_code' => '404', 'status_message' => "Transaction doesn't exist."], 404),
+    ]);
+    app(\App\Domain\Payment\CreatePaymentService::class)->create($order);
+
+    $this->getJson('/api/v1/guest/orders/'.$order->order_number)->assertOk()->assertJsonPath('data.status', 'PENDING_PAYMENT');
+    $this->getJson('/api/v1/guest/orders/'.$order->order_number)->assertOk();
+    Http::assertSentCount(2); // satu pembuatan sesi Snap + satu pengecekan status
+});

@@ -211,6 +211,28 @@ it('closes a charged transaction and verifies its final status', function () {
     Http::assertSentCount(3);
 });
 
+it('expires a pending QRIS charge when Midtrans rejects cancel so the buyer can change method', function () {
+    ['order' => $order] = payableOrder();
+    Http::fake(['*/status' => Http::sequence()
+        ->push(['transaction_status' => 'pending', 'payment_type' => 'qris'])
+        ->push(['transaction_status' => 'pending', 'payment_type' => 'qris'])
+        ->push(midtransPayload($order, 'expire')),
+        '*/cancel' => Http::response(['status_code' => '412', 'status_message' => 'Merchant cannot modify the status of the transaction'], 412),
+        '*/expire' => Http::response(['status_code' => '407'])]);
+
+    expect((new HttpMidtransProvider)->closeTransaction($order, 'cancel')['transaction_status'])->toBe('expire');
+    Http::assertSent(fn ($request) => str_ends_with($request->url(), '/expire'));
+});
+
+it('still refuses to continue when a pending charge can be neither cancelled nor expired', function () {
+    ['order' => $order] = payableOrder();
+    Http::fake(['*/status' => Http::response(['transaction_status' => 'pending', 'payment_type' => 'qris']),
+        '*/cancel' => Http::response(['status_code' => '412'], 412),
+        '*/expire' => Http::response(['status_code' => '412'], 412)]);
+
+    expect(fn () => (new HttpMidtransProvider)->closeTransaction($order, 'cancel'))->toThrow(RuntimeException::class);
+});
+
 it('cancels an uncharged Snap session before allowing release', function () {
     ['order' => $order] = payableOrder();
     app(CreatePaymentService::class)->create($order);

@@ -178,3 +178,14 @@ footer img,
 .product-gallery .gallery-dots button:focus-visible{outline:0}
 .product-gallery .gallery-dots button:focus-visible:before{box-shadow:0 0 0 3px #8fe7f7}
 @media(prefers-reduced-motion:reduce){.product-gallery .gallery-dots button,.product-gallery .gallery-dots button:before{transition:none}}
+
+/* Notifikasi "masuk ke keranjang" diberi jarak dari tombol pilihan ukuran. */
+.purchase-panel .added-to-cart{margin-top:1rem}
+
+/* Thumbnail produk di keranjang dan detail pesanan ikut bingkai 1:1. */
+@media(min-width:768px){.cart-item{grid-template-columns:120px 1fr auto auto}}
+.cart-item>img{width:120px;height:120px;aspect-ratio:1/1;object-fit:contain}
+.order-product-line{grid-template-columns:80px 1fr auto}
+.order-product-line img{width:80px;height:80px;aspect-ratio:1/1;object-fit:contain}
+@media(max-width:767px){.cart-item>img{width:100%;height:auto}}
+@media(max-width:760px){.order-product-line{grid-template-columns:70px 1fr}.order-product-line img{width:70px;height:70px}}

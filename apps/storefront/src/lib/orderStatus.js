@@ -38,3 +38,17 @@ const COURIERS = {jne: "JNE", jnt: "J&T", tiki: "TIKI", pos: "POS", sicepat: "Si
 // "sicepat" + "REG" → "SiCepat REG"
 export const courierLabel = (courier, service) =>
   [COURIERS[String(courier || "").toLowerCase()] || String(courier || "").toUpperCase(), service].filter(Boolean).join(" ");
+
+/**
+ * Menjalankan `check` tiap 10 detik selama 2 menit (12 kali), untuk memantau pesanan yang baru
+ * dibayar di Midtrans sampai statusnya berubah. Mengembalikan fungsi untuk menghentikannya.
+ */
+export function stopAfter(check, {interval = 10000, times = 12} = {}) {
+  let count = 0;
+  const timer = setInterval(() => {
+    count += 1;
+    check();
+    if (count >= times) clearInterval(timer);
+  }, interval);
+  return () => clearInterval(timer);
+}

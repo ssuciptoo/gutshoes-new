@@ -4,6 +4,7 @@ import {rupiah} from "../lib/currency";
 import Button from "../components/ui/Button";
 import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
+import {stopAfter} from "../lib/orderStatus";
 
 function GuestOrders({references, navigate, onOpenPayment, onRemember, user}) {
   const [records, setRecords] = useState(() =>
@@ -99,6 +100,38 @@ function GuestOrders({references, navigate, onOpenPayment, onRemember, user}) {
       active = false;
     };
   }, [references]);
+
+  // Setelah kembali dari Midtrans, status bayar bisa berubah beberapa detik kemudian. Selama ada
+  // pesanan yang menunggu pembayaran, periksa ulang diam-diam (backend menanyakan ke Midtrans).
+  const awaitingNumbers = records
+    .filter((record) => record.status === "PENDING_PAYMENT")
+    .map((record) => record.number)
+    .join(",");
+  useEffect(() => {
+    if (!awaitingNumbers) return undefined;
+    let active = true;
+    const refresh = async () => {
+      if (document.visibilityState !== "visible") return;
+      const waiting = references.filter((reference) => awaitingNumbers.split(",").includes(reference.number));
+      const results = await Promise.all(waiting.map(loadReference));
+      if (!active) return;
+      setRecords((current) =>
+        current.map((record) => {
+          const next = results.find((result) => result.number === record.number);
+          // Gangguan jaringan sesaat tidak boleh mengganti status yang sudah tampil.
+          return next && next.status !== "UNAVAILABLE" ? next : record;
+        }),
+      );
+    };
+    const stop = stopAfter(refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      active = false;
+      stop();
+      document.removeEventListener("visibilitychange", refresh);
+    };
+    // loadReference dibuat ulang tiap render; cukup dipicu oleh daftar pesanan yang menunggu.
+  }, [awaitingNumbers, references]);
 
   const continuePayment = async (record) => {
     if (paymentNumber || !record.canPay) return;

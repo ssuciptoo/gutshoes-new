@@ -6,7 +6,7 @@ import Button from "../../components/ui/Button";
 import Feedback from "../../components/ui/Feedback";
 import ConfirmDialog from "../../components/ui/ConfirmDialog";
 import {REFUNDS_ENABLED} from "../../lib/features";
-import {REFUND_STATUS, canContinuePayment, courierLabel, formatDeadline, orderStatusLabel, paymentStatusLabel} from "../../lib/orderStatus";
+import {REFUND_STATUS, canContinuePayment, courierLabel, formatDeadline, orderStatusLabel, paymentStatusLabel, stopAfter} from "../../lib/orderStatus";
 
 export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
   const [order, setOrder] = useState(null);
@@ -24,6 +24,20 @@ export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
       .catch(err => { if (active) setError(err.message || "Pesanan belum dapat dimuat."); });
     return () => { active = false; };
   }, [orderNumber, user.id, version]);
+  // Setelah kembali dari Midtrans, status bayar bisa berubah beberapa detik kemudian.
+  // Selama masih menunggu pembayaran, periksa ulang diam-diam tanpa mengosongkan halaman.
+  const awaitingPayment = order?.status === "PENDING_PAYMENT";
+  useEffect(() => {
+    if (!awaitingPayment) return undefined;
+    let active = true;
+    const refresh = () => {
+      if (document.visibilityState !== "visible") return;
+      api.order(orderNumber).then(response => { if (active) setOrder(response.data); }).catch(() => {});
+    };
+    const stop = stopAfter(refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { active = false; stop(); document.removeEventListener("visibilitychange", refresh); };
+  }, [awaitingPayment, orderNumber]);
   const cancel = async () => {
     if (requestInFlight.current) return;
     requestInFlight.current = true;

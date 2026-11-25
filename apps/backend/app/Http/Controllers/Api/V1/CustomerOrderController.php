@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Payment\RefreshPendingPayment;
 use App\Domain\Shipping\ShipmentTracker;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
@@ -19,9 +20,12 @@ class CustomerOrderController extends Controller
         return response()->json(['data' => $orders->items(), 'meta' => ['current_page' => $orders->currentPage(), 'last_page' => $orders->lastPage(), 'per_page' => $orders->perPage(), 'total' => $orders->total()]]);
     }
 
-    public function show(Request $request, string $orderNumber): JsonResponse
+    public function show(Request $request, string $orderNumber, RefreshPendingPayment $payments): JsonResponse
     {
-        $order = Order::where('order_number', $orderNumber)->where('user_id', $request->user()->id)->with(['items', 'addresses', 'payment', 'shipment', 'statusHistories', 'refunds:id,order_id,status,amount,currency,completed_at'])->firstOrFail();
+        $order = Order::where('order_number', $orderNumber)->where('user_id', $request->user()->id)->firstOrFail();
+        // Pembeli yang baru kembali dari Midtrans langsung melihat status bayar terbaru.
+        $payments->refresh($order);
+        $order->load(['items', 'addresses', 'payment', 'shipment', 'statusHistories', 'refunds:id,order_id,status,amount,currency,completed_at']);
 
         return response()->json(['data' => $order]);
     }

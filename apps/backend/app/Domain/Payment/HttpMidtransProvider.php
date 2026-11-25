@@ -5,6 +5,7 @@ namespace App\Domain\Payment;
 use App\Models\Order;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 
 class HttpMidtransProvider implements MidtransProvider
@@ -75,8 +76,21 @@ class HttpMidtransProvider implements MidtransProvider
         $response->throw();
         if ($response->json('transaction_status') === 'pending') {
             // Re-read even after a rejected operation: payment may have won the race.
-            $client->post($url.'/'.$action);
+            $closed = $client->post($url.'/'.$action);
             $response = $client->get($url.'/status')->throw();
+            // Midtrans menolak cancel untuk charge yang masih pending pada QRIS, GoPay, dan transfer
+            // bank (VA); charge seperti itu hanya bisa ditutup dengan expire. Hasil akhirnya sama:
+            // charge lama tidak bisa dibayar lagi, sehingga pembeli dapat memilih metode lain.
+            if ($action === 'cancel' && $response->json('transaction_status') === 'pending') {
+                Log::info('Midtrans cancel left the charge pending; expiring it instead.', [
+                    'order_id' => $orderId,
+                    'payment_type' => $response->json('payment_type'),
+                    'cancel_status' => $closed->status(),
+                    'cancel_status_code' => $closed->json('status_code'),
+                ]);
+                $client->post($url.'/expire');
+                $response = $client->get($url.'/status')->throw();
+            }
         }
         $payload = $response->json();
         if (! is_array($payload) || ! in_array($payload['transaction_status'] ?? '', ['cancel', 'expire', 'settlement', 'capture'], true)
