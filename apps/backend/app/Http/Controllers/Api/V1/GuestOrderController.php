@@ -24,7 +24,7 @@ class GuestOrderController extends Controller
     {
         $order = Order::where('order_number', $orderNumber)->firstOrFail();
         $access->authorize($request, $order);
-        $result = $payments->create($order);
+        $result = $payments->create($order, $request->boolean('change_method'));
 
         return response()->json(['data' => [
             'order' => $presenter->present($order->refresh()),

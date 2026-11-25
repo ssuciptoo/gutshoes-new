@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -24,5 +25,16 @@ class Payment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    /** @return HasMany<PaymentAttempt, $this> */
+    public function attempts(): HasMany
+    {
+        return $this->hasMany(PaymentAttempt::class);
+    }
+
+    public function midtransOrderId(): string
+    {
+        return $this->provider_order_id ?: $this->order()->value('order_number');
     }
 }

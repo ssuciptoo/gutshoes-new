@@ -12,7 +12,7 @@ function Payment({order, navigate, user}) {
   );
   const [redirectUrl, setRedirectUrl] = useState(order?.redirectUrl || "");
   const [error, setError] = useState(order?.paymentError || "");
-  const retryPayment = async () => {
+  const retryPayment = async (changeMethod = false) => {
     if (!order || paymentState === "loading") return;
     setPaymentState("loading");
     setError("");
@@ -23,10 +23,11 @@ function Payment({order, navigate, user}) {
         );
       const response =
         order.customerType === "guest" || order.accessToken
-          ? await api.createGuestPayment(order.number, order.accessToken)
-          : await api.createCustomerPayment(order.number, order.email);
+          ? await api.createGuestPayment(order.number, order.accessToken, changeMethod)
+          : await api.createCustomerPayment(order.number, order.email, changeMethod);
       setRedirectUrl(response.data.redirect_url);
       setPaymentState("ready");
+      if (changeMethod) window.location.assign(response.data.redirect_url);
     } catch (err) {
       setPaymentState("error");
       setError(
@@ -86,12 +87,17 @@ function Payment({order, navigate, user}) {
       </div>
       {error && <Feedback>{error}</Feedback>}
       {ready ? (
-        <Button onClick={() => window.location.assign(redirectUrl)}>
-          Bayar sekarang
-        </Button>
+        <>
+          <Button onClick={() => window.location.assign(redirectUrl)}>
+            Bayar sekarang
+          </Button>
+          <button className="text-link" onClick={() => retryPayment(true)}>
+            Ganti metode pembayaran
+          </button>
+        </>
       ) : (
         <Button
-          onClick={retryPayment}
+          onClick={() => retryPayment()}
           disabled={paymentState === "loading"}
           aria-busy={paymentState === "loading"}
         >

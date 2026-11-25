@@ -32,11 +32,16 @@ Status pending atau terminal non-sukses yang ditemukan tidak memicu token baru. 
 
 Deny/failure dapat berasal dari satu percobaan metode pembayaran dalam sesi Snap. Webhook tersebut kini tidak melepas reservasi atau mengunci identitas transaksi final. Penutupan HTTP juga tidak menganggap deny/failure sebagai konfirmasi sesi sudah ditutup; stok ditahan sampai cancel/expire terkonfirmasi atau review selesai.
 
+## Ganti metode pembayaran
+
+Midtrans mengikat satu order_id ke metode yang pertama kali dipilih. Endpoint pembayaran (customer dan guest) menerima change_method=true. Backend menutup sesi lama (cancel harus terkonfirmasi), menyimpan order_id lama di payment_attempts, lalu membuat sesi Snap baru dengan order_id NOMOR-ORDER-2, -3, dan seterusnya. Batas bayar pesanan tidak berubah. Webhook untuk order_id lama dicatat tetapi tidak mengubah pesanan atau stok. Bila order_id lama melaporkan settlement, webhook ditandai "manual review required" dan dicatat sebagai log critical. Bila pembayaran masuk saat sesi lama ditutup, pembayaran itu dicatat dan sesi baru tidak dibuat.
+
 ## Matriks uji provider yang masih wajib
 
 - Buat checkout guest/customer dan buka redirect_url sandbox yang sebenarnya.
 - Selesaikan pembayaran melalui simulator, pastikan webhook mengubah order menjadi PAID sekali saja.
 - Tolak satu percobaan lalu bayar menggunakan metode lain pada order sama.
+- Pilih QRIS, klik Ganti metode pembayaran, lalu bayar dengan VA; pastikan cancel untuk order_id lama tidak menutup pesanan.
 - Uji pending, pembatalan sebelum/sesudah memilih metode, expiry, dan callback berulang.
 - Putuskan respons inisialisasi dan jalankan pemulihan; validasi token lama tidak dapat digunakan setelah diganti.
 - Uji pembayaran terlambat menjadi refund PENDING dan verifikasi dukungan refund per metode tanpa menganggap pencatatan lokal sebagai refund berhasil.

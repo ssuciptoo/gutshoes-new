@@ -74,7 +74,7 @@ class ConfirmPayment
             || number_format((float) $amount, 2, '.', '') !== (string) $payment->amount
             || (string) $payment->amount !== (string) $order->grand_total
             || ($payload['currency'] ?? 'IDR') !== $order->currency
-            || ($payload['order_id'] ?? null) !== $order->order_number
+            || ($payload['order_id'] ?? null) !== $payment->midtransOrderId()
             || empty($payload['transaction_id'])
             || ($payment->provider_transaction_id && $payment->provider_transaction_id !== $payload['transaction_id'])) {
             throw new DomainException('Payment details do not match the order.');

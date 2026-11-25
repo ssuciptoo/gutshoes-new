@@ -39,15 +39,15 @@ export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
       setError(err.message || "Pembatalan belum terkonfirmasi. Coba lagi untuk memeriksa permintaan yang sama.");
     } finally { requestInFlight.current = false; setBusy(false); }
   };
-  const pay = async () => {
+  const pay = async (changeMethod = false) => {
     if (requestInFlight.current) return;
     requestInFlight.current = true;
     setBusy(true);
     setError("");
     try {
-      const response = await api.createCustomerPayment(orderNumber, user.email);
+      const response = await api.createCustomerPayment(orderNumber, user.email, changeMethod);
       window.location.assign(response.data.redirect_url);
-    } catch (err) { setError(err.message || "Pembayaran belum dapat dibuka."); }
+    } catch (err) { setError(Object.values(err?.errors || {}).flat()[0] || err.message || "Pembayaran belum dapat dibuka."); }
     finally { requestInFlight.current = false; setBusy(false); }
   };
   const address = order?.addresses?.find(item => item.type === "SHIPPING");
@@ -64,7 +64,8 @@ export default function OrderDetail({user, orderNumber, navigate, onLogout}) {
         <span className="order-state">{orderStatusLabel(order.status)}</span></div>
       {canContinuePayment(order) && <div className="order-pay-banner" role="status">
         <p><strong>Selesaikan pembayaran sebelum {formatDeadline(order.expires_at)}.</strong> Pesanan otomatis dibatalkan bila belum dibayar.</p>
-        <Button onClick={pay} disabled={busy}>{busy ? "Membuka pembayaran…" : "Lanjutkan pembayaran"}</Button>
+        <Button onClick={() => pay()} disabled={busy}>{busy ? "Membuka pembayaran…" : "Lanjutkan pembayaran"}</Button>
+        {order.payment && <Button variant="ghost" onClick={() => pay(true)} disabled={busy}>Ganti metode pembayaran</Button>}
       </div>}
       <section className="order-detail-block"><h3>Produk</h3>{order.items.map(item => <div className="order-product-line order-product-line--snapshot" key={item.id}>
         <span><strong>{item.product_name}</strong><small>{item.brand_name} · Ukuran {item.size_label} · {item.sku} · {item.quantity} barang</small></span>

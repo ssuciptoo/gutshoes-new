@@ -251,3 +251,89 @@ it('tells the tracking page whether a pending order can still be paid', function
     $this->postJson('/api/v1/orders/track', ['order_number' => $order->order_number, 'email' => $order->customer_email])
         ->assertOk()->assertJsonPath('data.can_pay', false);
 });
+
+function signedMidtransPayload(string $providerOrderId, string $transactionId, string $status): array
+{
+    $payload = ['order_id' => $providerOrderId, 'transaction_id' => $transactionId, 'transaction_status' => $status,
+        'status_code' => '200', 'gross_amount' => '120000.00', 'transaction_time' => '2026-08-23 12:30:00'];
+    $payload['signature_key'] = hash('sha512', $payload['order_id'].$payload['status_code'].$payload['gross_amount'].config('services.midtrans.server_key'));
+
+    return $payload;
+}
+
+it('lets the buyer change payment method with a new Midtrans order ID', function () {
+    ['order' => $order, 'inventory' => $inventory] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $first = $this->postJson($url)->assertCreated();
+    expect($first->json('data.payment.provider_order_id'))->toBe($order->order_number);
+    // Pembeli memilih QRIS di Snap: Midtrans mencatat charge pending pada order_id pertama.
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'pending'))->assertOk();
+
+    $second = $this->postJson($url, ['change_method' => true])->assertCreated()
+        ->assertJsonPath('data.payment.status', 'PENDING')
+        ->assertJsonPath('data.payment.attempt', 2)
+        ->assertJsonPath('data.payment.provider_order_id', $order->order_number.'-2');
+    expect($second->json('data.redirect_url'))->not->toBe($first->json('data.redirect_url'));
+    $this->assertDatabaseHas('payment_attempts', ['provider_order_id' => $order->order_number, 'provider_transaction_id' => 'qris-1']);
+
+    // Notifikasi cancel untuk percobaan lama tidak boleh menutup pesanan atau melepas stok.
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'cancel'))->assertOk();
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
+        ->and($inventory->refresh()->reserved)->toBe(1)
+        ->and($order->payment->refresh()->status)->toBe('PENDING');
+
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number.'-2', 'va-2', 'settlement'))->assertOk();
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PAID')
+        ->and($order->payment->refresh()->provider_transaction_id)->toBe('va-2')
+        ->and($inventory->refresh()->sold)->toBe(1);
+});
+
+it('flags success on a replaced payment attempt for review without touching the order', function () {
+    ['order' => $order] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $this->postJson($url)->assertCreated();
+    $this->postJson($url, ['change_method' => true])->assertCreated();
+
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'old-1', 'settlement'))->assertOk();
+
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
+        ->and(PaymentWebhook::latest('id')->first()->processing_error)->toContain('manual review');
+});
+
+it('keeps a payment that lands while the old session is being closed', function () {
+    ['order' => $order] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $this->postJson($url)->assertCreated();
+    $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
+    {
+        public function closeTransaction(Order $order, string $action): array
+        {
+            return ['order_id' => $order->midtransOrderId(), 'transaction_status' => 'settlement',
+                'transaction_id' => 'paid-during-close', 'gross_amount' => '120000.00'];
+        }
+    });
+
+    $this->postJson($url, ['change_method' => true])->assertStatus(422);
+
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PAID')
+        ->and($order->payment->refresh()->attempt)->toBe(1);
+    $this->assertDatabaseCount('payment_attempts', 0);
+});
+
+it('does not change method when the old session cannot be closed', function () {
+    ['order' => $order] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $first = $this->postJson($url)->assertCreated();
+    $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
+    {
+        public function closeTransaction(Order $order, string $action): array
+        {
+            throw new RuntimeException('Timeout');
+        }
+    });
+
+    $this->postJson($url, ['change_method' => true])->assertStatus(422)->assertJsonValidationErrors('payment');
+
+    expect($order->payment->refresh()->snap_token)->toBe($first->json('data.payment.snap_token'))
+        ->and($order->payment->attempt)->toBe(1);
+});

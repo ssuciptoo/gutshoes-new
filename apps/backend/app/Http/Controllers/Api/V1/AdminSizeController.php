@@ -7,6 +7,8 @@ use App\Models\ProductVariant;
 use App\Models\Size;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AdminSizeController extends Controller
 {
@@ -17,12 +19,23 @@ class AdminSizeController extends Controller
 
     public function store(Request $r): JsonResponse
     {
-        return response()->json(['data' => Size::create($this->data($r))], 201);
+        $data = $this->data($r);
+        $size = DB::transaction(function () use ($data): Size {
+            $this->purgeDeleted($data['system'], $data['value']);
+
+            return Size::create($data);
+        });
+
+        return response()->json(['data' => $size], 201);
     }
 
     public function update(Request $r, Size $size): JsonResponse
     {
-        $size->update($this->data($r, $size));
+        $data = $this->data($r, $size);
+        DB::transaction(function () use ($size, $data): void {
+            $this->purgeDeleted($data['system'], $data['value'], $size->id);
+            $size->update($data);
+        });
 
         return response()->json(['data' => $size->refresh()]);
     }
@@ -36,9 +49,23 @@ class AdminSizeController extends Controller
             ], 422);
         }
 
-        $size->delete();
+        // Ukuran yang dihapus tidak pernah dipakai varian (dicek di atas), jadi dihapus permanen agar
+        // nilainya bisa dipakai lagi; soft delete hanya akan mengunci indeks unik (system, value).
+        $size->forceDelete();
 
         return response()->json(['data' => ['deleted' => true]]);
+    }
+
+    /**
+     * Baris lama yang ter-soft-delete (sebelum hapus permanen diterapkan) masih memegang indeks unik.
+     * Baris itu dijamin tidak dipakai varian, jadi aman dihapus permanen sebelum nilainya dipakai lagi.
+     */
+    private function purgeDeleted(string $system, string $value, ?int $exceptId = null): void
+    {
+        Size::onlyTrashed()->where('system', $system)->where('value', $value)
+            ->when($exceptId, fn ($query) => $query->whereKeyNot($exceptId))
+            ->whereNotIn('id', ProductVariant::withTrashed()->select('size_id'))
+            ->get()->each->forceDelete();
     }
 
     /** @return array<string,mixed> */
@@ -46,7 +73,8 @@ class AdminSizeController extends Controller
     {
         $data = $r->validate([
             'system' => ['required', 'string', 'max:16'],
-            'value' => ['required', 'string', 'max:16', 'unique:sizes,value,'.($size instanceof Size ? $size->id : 'NULL').',id,system,'.$r->input('system')],
+            'value' => ['required', 'string', 'max:16', Rule::unique('sizes', 'value')->where('system', (string) $r->input('system'))
+                ->whereNull('deleted_at')->ignore($size?->id)],
             'label' => ['required', 'string', 'max:32'],
             'foot_length_cm' => ['nullable', 'numeric', 'between:8,40', 'decimal:0,1'],
             'sort_value' => ['nullable', 'numeric', 'between:0,9999'],

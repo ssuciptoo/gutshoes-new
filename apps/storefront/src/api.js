@@ -183,15 +183,17 @@ export const api = {
     request("/guest/orders/" + encodeURIComponent(number), {
       headers: {"X-Guest-Order-Token": token},
     }),
-  createGuestPayment: (number, token) =>
+  // changeMethod menutup sesi Midtrans yang berjalan agar pembeli bisa memilih metode lain.
+  createGuestPayment: (number, token, changeMethod = false) =>
     request("/guest/orders/" + encodeURIComponent(number) + "/payment", {
       method: "POST",
       headers: {"X-Guest-Order-Token": token},
+      ...(changeMethod ? {body: {change_method: true}} : {}),
     }),
-  createCustomerPayment: (number, email) =>
+  createCustomerPayment: (number, email, changeMethod = false) =>
     request("/orders/" + encodeURIComponent(number) + "/payment", {
       method: "POST",
-      body: {email},
+      body: {email, ...(changeMethod ? {change_method: true} : {})},
     }),
   cancel: (number, data, key, guestToken) =>
     request(`/orders/${encodeURIComponent(number)}/cancel`, {

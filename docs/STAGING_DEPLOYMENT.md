@@ -455,6 +455,11 @@ cd /opt/gutshoes && sudo docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL
 
 Lihat password: `sudo grep '^MYSQL_PASSWORD=' /opt/gutshoes/.env`. Jangan menyimpannya di repo atau chat.
 
+Waktu di database disimpan dalam **UTC** (disengaja; aplikasi dan email mengonversinya ke waktu
+lokal). Semua kolom waktu bertipe `TIMESTAMP`, jadi untuk melihatnya dalam WIB cukup jalankan
+`SET time_zone = '+07:00';` di sesi GUI (di DBeaver: *Connection settings → Initialization →
+Bootstrap queries*). Ini hanya mengubah tampilan sesi Anda, bukan data.
+
 Aturan pakai: gunakan untuk melihat data dan investigasi. **Jangan mengubah status pesanan,
 pembayaran, atau stok langsung di tabel**; ubah lewat panel admin agar riwayat status, reservasi
 stok, dan audit log tetap konsisten. Backup dulu (`deploy.sh backup`) sebelum mengubah data apa pun.

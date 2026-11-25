@@ -33,7 +33,7 @@ class ClosePendingPayment
         if ($internalStatus !== PaymentStatus::FAILED) {
             throw new \RuntimeException('Payment closure is not confirmed.');
         }
-        if (($payload['order_id'] ?? null) !== $order->order_number) {
+        if (($payload['order_id'] ?? null) !== $payment->midtransOrderId()) {
             throw new \RuntimeException('Provider returned another order.');
         }
         if (isset($payload['gross_amount'])) {

@@ -13,7 +13,7 @@ class HttpMidtransProvider implements MidtransProvider
     {
         $response = Http::withBasicAuth((string) config('services.midtrans.server_key'), '')
             ->timeout(10)->post(config('services.midtrans.snap_url'), [
-                'transaction_details' => ['order_id' => $order->order_number, 'gross_amount' => (int) $order->grand_total],
+                'transaction_details' => ['order_id' => $order->midtransOrderId(), 'gross_amount' => (int) $order->grand_total],
                 'customer_details' => ['first_name' => $order->customer_name, 'email' => $order->customer_email, 'phone' => $order->customer_phone],
                 'expiry' => ['start_time' => Carbon::parse($order->expires_at)->subHours(24)->format('Y-m-d H:i:s O'), 'unit' => 'hours', 'duration' => 24],
                 // Setelah bayar/menutup halaman Midtrans, pembeli kembali ke pesanannya di toko.
@@ -44,7 +44,8 @@ class HttpMidtransProvider implements MidtransProvider
         if (! in_array($action, ['cancel', 'expire'], true)) {
             throw new RuntimeException('Invalid payment closure action.');
         }
-        $url = rtrim((string) config('services.midtrans.api_url'), '/').'/'.rawurlencode($order->order_number);
+        $orderId = $order->midtransOrderId();
+        $url = rtrim((string) config('services.midtrans.api_url'), '/').'/'.rawurlencode($orderId);
         $client = Http::withBasicAuth((string) config('services.midtrans.server_key'), '')->acceptJson()->timeout(10);
         $response = $client->get($url.'/status');
         if ($response->status() === 404 || (string) $response->json('status_code') === '404') {
@@ -68,7 +69,7 @@ class HttpMidtransProvider implements MidtransProvider
             // A charge may have started while the Snap session was being closed.
             $response = $client->get($url.'/status');
             if ($response->status() === 404 || (string) $response->json('status_code') === '404') {
-                return ['transaction_status' => 'cancel', 'order_id' => $order->order_number];
+                return ['transaction_status' => 'cancel', 'order_id' => $orderId];
             }
         }
         $response->throw();
@@ -91,7 +92,7 @@ class HttpMidtransProvider implements MidtransProvider
         $response = Http::withBasicAuth((string) config('services.midtrans.server_key'), '')
             ->acceptJson()
             ->timeout(10)
-            ->get(rtrim((string) config('services.midtrans.api_url'), '/').'/'.rawurlencode($order->order_number).'/status');
+            ->get(rtrim((string) config('services.midtrans.api_url'), '/').'/'.rawurlencode($order->midtransOrderId()).'/status');
 
         if ($response->status() === 404 || (string) $response->json('status_code') === '404') {
             return null;

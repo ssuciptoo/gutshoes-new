@@ -47,6 +47,14 @@ class Order extends Model
         return $this->hasOne(Payment::class);
     }
 
+    /** order_id yang dipakai di Midtrans untuk percobaan pembayaran aktif; selalu dibaca ulang dari database. */
+    public function midtransOrderId(): string
+    {
+        $id = Payment::where('order_id', $this->id)->where('provider', 'MIDTRANS')->value('provider_order_id');
+
+        return is_string($id) && $id !== '' ? $id : $this->order_number;
+    }
+
     /** @return HasOne<Shipment, $this> */
     public function shipment(): HasOne
     {

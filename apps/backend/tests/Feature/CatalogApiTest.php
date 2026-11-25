@@ -72,7 +72,30 @@ it('lets an admin manage master sizes and protects sizes used by product variant
 
     $unused = Size::factory()->create(['system' => 'UK', 'value' => '8.5', 'label' => 'UK 8.5']);
     $this->actingAs($admin)->deleteJson('/api/v1/admin/sizes/'.$unused->id)->assertOk();
-    $this->assertSoftDeleted('sizes', ['id' => $unused->id]);
+    // Ukuran yang tidak dipakai dihapus permanen agar nilainya bisa dipakai lagi.
+    $this->assertDatabaseMissing('sizes', ['id' => $unused->id]);
+    $this->actingAs($admin)->postJson('/api/v1/admin/sizes', ['system' => 'UK', 'value' => '8.5', 'label' => 'UK 8.5'])->assertCreated();
+});
+
+it('reuses a size value still held by an old soft-deleted row', function () {
+    $admin = User::factory()->admin()->create();
+    // Baris lama dari sebelum hapus permanen diterapkan (seperti EU 42 di staging).
+    $legacy = Size::factory()->create(['system' => 'EU', 'value' => '42', 'label' => 'EU 42']);
+    $legacy->delete();
+    $other = Size::factory()->create(['system' => 'EU', 'value' => '44', 'label' => 'EU 44']);
+    $legacyUk = Size::factory()->create(['system' => 'UK', 'value' => '9', 'label' => 'UK 9']);
+    $legacyUk->delete();
+
+    $this->actingAs($admin)->postJson('/api/v1/admin/sizes', ['system' => 'EU', 'value' => '42', 'label' => 'EU 42'])
+        ->assertCreated()->assertJsonPath('data.value', '42');
+    // Mengubah ukuran lain ke nilai yang dipegang baris lama juga berhasil.
+    $this->actingAs($admin)->putJson('/api/v1/admin/sizes/'.$other->id, ['system' => 'UK', 'value' => '9', 'label' => 'UK 9'])->assertOk();
+    // Nilai yang masih aktif tetap ditolak.
+    $this->actingAs($admin)->postJson('/api/v1/admin/sizes', ['system' => 'EU', 'value' => '42', 'label' => 'EU 42'])
+        ->assertUnprocessable()->assertJsonValidationErrors('value');
+
+    expect(Size::withTrashed()->where('system', 'EU')->where('value', '42')->count())->toBe(1)
+        ->and(Size::withTrashed()->find($legacy->id))->toBeNull();
 });
 
 it('stores foot length and orders fractional sizes numerically', function () {

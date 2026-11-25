@@ -16,7 +16,7 @@ class PaymentController extends Controller
     {
         $order = Order::where('order_number', $orderNumber)->firstOrFail();
         $access->authorize($request, $order);
-        $result = $payments->create($order);
+        $result = $payments->create($order, $request->boolean('change_method'));
 
         return response()->json(['data' => ['payment' => $result['payment'], 'redirect_url' => $result['redirect_url']]], 201);
     }
