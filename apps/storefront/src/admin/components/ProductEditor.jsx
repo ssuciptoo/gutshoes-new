@@ -558,6 +558,7 @@ function ProductEditor({
                 <div>
                   <h3>Gambar produk</h3>
                   <p id="product-image-help">JPEG, PNG, atau WebP, 300–4000 px, maksimal 5 MB. Produk baru akan mengunggah gambar saat disimpan.</p>
+                  <p className="adm-muted-copy">Gunakan foto persegi (1:1), disarankan 1080 × 1080 px, seperti standar marketplace. Foto 1:1 mengisi bingkai penuh; rasio lain tetap tampil utuh dengan latar blur.</p>
                 </div>
               </div>
               {imagePreview && imageFile && (

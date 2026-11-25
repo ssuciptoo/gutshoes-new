@@ -5,9 +5,21 @@ import Feedback from "../components/ui/Feedback";
 import Icon from "../components/ui/Icon";
 import ProductCard from "../components/catalog/ProductCard";
 import {formatFootLength} from "../lib/catalog";
+import {useImageFit} from "../lib/useImageFit";
 
 import {useCatalog, useProduct} from "../lib/useCatalog";
 import {applySeo, productJsonLd} from "../lib/seo";
+
+// Slide galeri: foto berlatar (bukan cutout 4:3) tampil penuh dengan latar blur dari foto itu sendiri.
+function GallerySlide({image, active}) {
+  const fit = useImageFit();
+  const photo = fit.fit === "photo";
+  return (
+    <div className={`gallery-slide${photo ? " is-photo" : ""}`} style={photo ? {"--photo": `url("${image.src}")`} : undefined} aria-hidden={!active}>
+      <img ref={fit.ref} onLoad={fit.onLoad} src={image.src} alt={active ? image.alt : ""} draggable="false" />
+    </div>
+  );
+}
 
 function ProductDetail({slug, products, addToCart, navigate}) {
   const {product, loading, error: requestError, retry} = useProduct(slug);
@@ -87,7 +99,7 @@ function ProductDetail({slug, products, addToCart, navigate}) {
       <button className="back-link" onClick={() => navigate("catalog")}><Icon name="back" /> Kembali ke katalog</button>
       <div className="detail-layout">
         <div className="product-gallery" tabIndex={showNavigation ? 0 : undefined} role={showNavigation ? "region" : undefined} aria-roledescription={showNavigation ? "carousel" : undefined} aria-label={showNavigation ? `Galeri foto ${product.name}` : undefined} onKeyDown={handleGalleryKey} onPointerDown={(event) => { pointerStart.current = event.clientX; }} onPointerUp={(event) => { if (!showNavigation || pointerStart.current === null) return; const distance = event.clientX - pointerStart.current; pointerStart.current = null; if (Math.abs(distance) > 45) showImage(activeImage + (distance < 0 ? 1 : -1)); }} onPointerCancel={() => { pointerStart.current = null; }}>
-          {images.length ? <div className="gallery-track" style={{transform: `translateX(-${activeImage * 100}%)`}}>{images.map((image, index) => <div className="gallery-slide" key={image.id || image.src} aria-hidden={index !== activeImage}><img src={image.src} alt={index === activeImage ? image.alt : ""} draggable="false" /></div>)}</div> : <span className="product-image-placeholder">Gambar belum tersedia</span>}
+          {images.length ? <div className="gallery-track" style={{transform: `translateX(-${activeImage * 100}%)`}}>{images.map((image, index) => <GallerySlide key={image.id || image.src} image={image} active={index === activeImage} />)}</div> : <span className="product-image-placeholder">Gambar belum tersedia</span>}
           {showNavigation && <><button className="gallery-arrow previous" type="button" onClick={() => showImage(activeImage - 1)} aria-label="Foto sebelumnya"><Icon name="back" /></button><button className="gallery-arrow next" type="button" onClick={() => showImage(activeImage + 1)} aria-label="Foto berikutnya"><Icon name="back" /></button><div className="gallery-dots" aria-label="Pilih foto produk">{images.map((image, index) => <button key={image.id || image.src} type="button" className={index === activeImage ? "active" : ""} onClick={() => showImage(index)} aria-label={`Tampilkan foto ${index + 1} dari ${images.length}`} aria-current={index === activeImage ? "true" : undefined} />)}</div></>}
         </div>
         <section className="purchase-panel">

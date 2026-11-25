@@ -1,7 +1,9 @@
 import React from "react";
 import {rupiah} from "../../lib/currency";
+import {useImageFit} from "../../lib/useImageFit";
 
 function ProductCard({product, onOpen}) {
+  const image = useImageFit();
   const href = `/product/${encodeURIComponent(product.slug || product.id)}`;
   const open = (event) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -10,9 +12,15 @@ function ProductCard({product, onOpen}) {
   };
   return (
     <article className="product-card">
-      <a href={href} className="product-card__image" onClick={open} aria-label={`Lihat ${product.name}`}>
+      <a
+        href={href}
+        className={`product-card__image${product.image && image.fit === "photo" ? " is-photo" : ""}`}
+        style={product.image && image.fit === "photo" ? {"--photo": `url("${product.image}")`} : undefined}
+        onClick={open}
+        aria-label={`Lihat ${product.name}`}
+      >
         {product.image ? (
-          <img src={product.image} alt={product.imageAlt || product.name} loading="lazy" decoding="async" />
+          <img ref={image.ref} onLoad={image.onLoad} src={product.image} alt={product.imageAlt || product.name} loading="lazy" decoding="async" />
         ) : (
           <span className="product-image-placeholder" aria-hidden="true">Gambar belum tersedia</span>
         )}

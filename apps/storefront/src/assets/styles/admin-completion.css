@@ -139,7 +139,7 @@
 .adm-image-preview img,
 .adm-image-list > div > img {
   width: 88px;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 1 / 1;
   object-fit: contain;
   border-radius: 8px;
   background: #fff;
