@@ -43,6 +43,8 @@ class AdminCategoryController extends Controller
     /** @return array<string,mixed> */
     private function data(Request $r, ?Category $category = null): array
     {
-        return $r->validate(['parent_id' => ['nullable', 'integer', 'exists:categories,id', 'not_in:'.($category instanceof Category ? $category->id : 0)], 'name' => ['required', 'string', 'max:255'], 'slug' => ['required', 'alpha_dash', 'max:255', 'unique:categories,slug,'.($category instanceof Category ? $category->id : 'NULL')], 'description' => ['nullable', 'string', 'max:2000']]);
+        return $r->validate(['parent_id' => ['nullable', 'integer', 'exists:categories,id', 'not_in:'.($category instanceof Category ? $category->id : 0)], 'name' => ['required', 'string', 'max:255'], 'slug' => ['required', 'alpha_dash', 'max:255', 'unique:categories,slug,'.($category instanceof Category ? $category->id : 'NULL')], 'description' => ['nullable', 'string', 'max:2000'],
+            // Kosong = ikuti template latar default toko.
+            'image_backdrop_id' => ['nullable', 'integer', 'exists:image_backdrops,id']]);
     }
 }

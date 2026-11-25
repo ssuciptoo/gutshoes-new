@@ -5,6 +5,7 @@ import {serverList} from "../lib/helpers";
 import PageHead from "../components/PageHead";
 import ResourceState from "../components/ResourceState";
 import SettingsForm from "../components/SettingsForm";
+import BackdropSettings from "../components/BackdropSettings";
 import WarehouseForm from "../components/WarehouseForm";
 
 function SettingsPage() {
@@ -13,6 +14,7 @@ function SettingsPage() {
   return (
     <>
       <PageHead section="settings" />
+      <BackdropSettings />
       <ResourceState {...resource} />
       {!resource.loading && !resource.error && (
         <SettingsForm items={serverList(resource.data)} reload={resource.retry} />

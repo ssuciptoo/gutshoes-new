@@ -19,4 +19,10 @@ class Category extends Model
     {
         return $this->belongsTo(self::class, 'parent_id');
     }
+
+    /** @return BelongsTo<ImageBackdrop, $this> */
+    public function imageBackdrop(): BelongsTo
+    {
+        return $this->belongsTo(ImageBackdrop::class);
+    }
 }

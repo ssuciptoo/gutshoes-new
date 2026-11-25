@@ -255,6 +255,10 @@ Opsi ukuran adalah grid tombol setinggi 58px. State default putih berborder, sta
 
 Packshot tunggal berada pada bidang netral rasio 4:3. Metadata merek dan stok muncul sebelum nama, kemudian harga tebal dengan angka tabular dan preview ukuran. Pada mobile rak tetap dua kolom, sementara metadata stok dan preview ukuran dapat disembunyikan demi keterbacaan.
 
+### Template Latar Gambar Produk
+
+Foto produk idealnya PNG/WebP berlatar transparan. Latar kartu dan galeri detail diambil dari template yang diatur admin (Pengaturan → Template latar gambar produk): warna solid, gradien dua warna, atau gambar latar, dengan bayangan opsional. Satu template default berlaku untuk semua produk dan kategori boleh memakai template sendiri. Server menandai foto transparan secara otomatis; foto berlatar penuh (poster, foto toko) tetap tampil apa adanya agar tidak tertimpa. Implementasi: `lib/backdrops.jsx` (`backdropFrameProps`) dan class `.has-backdrop`.
+
 ## Do's and Don'ts
 
 ### Do:

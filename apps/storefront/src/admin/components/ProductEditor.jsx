@@ -6,10 +6,43 @@ import useUnsavedGuard from "../hooks/useUnsavedGuard";
 
 const formKey = (value) => JSON.stringify({...value, images: undefined});
 import {catalogImageUrl} from "../../lib/catalog";
+import {backdropFrameProps, useBackdrops} from "../../lib/backdrops";
 import Badge from "./Badge";
 import Button from "./Button";
 import Icon from "./Icon";
 import Select from "../../components/ui/Select";
+
+// Cek cepat di browser: foto yang latarnya sudah dihapus punya sudut transparan.
+// Hanya untuk peringatan; keputusan akhir tetap dari server.
+function fileHasTransparency(file) {
+  if (file.type === "image/jpeg") return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 64;
+        canvas.height = 64;
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, 64, 64);
+        const {data} = context.getImageData(0, 0, 64, 64);
+        const alphaAt = (x, y) => data[(y * 64 + x) * 4 + 3];
+        const corners = [alphaAt(0, 0), alphaAt(63, 0), alphaAt(0, 63), alphaAt(63, 63)];
+        resolve(corners.filter((alpha) => alpha < 28).length >= 3);
+      } catch {
+        resolve(true);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(true);
+    };
+    image.src = url;
+  });
+}
 
 function ProductEditor({
   product,
@@ -32,6 +65,7 @@ function ProductEditor({
   const [imageFile, setImageFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const [imageWarning, setImageWarning] = useState("");
   const imageInputRef = useRef(null);
   const drawerRef = useRef(null);
   useEffect(() => {
@@ -45,6 +79,7 @@ function ProductEditor({
   }, [imageFile]);
   const chooseImage = (file) => {
     setError("");
+    setImageWarning("");
     if (!file) {
       setImageFile(null);
       return;
@@ -60,6 +95,14 @@ function ProductEditor({
       return;
     }
     setImageFile(file);
+    setImageWarning("");
+    fileHasTransparency(file).then((transparent) => {
+      if (!transparent) {
+        setImageWarning(
+          "Gambar ini tampaknya tidak berlatar transparan, jadi akan tampil apa adanya tanpa template latar toko.",
+        );
+      }
+    });
   };
   const uploadSelectedImage = async (productId, existingImages = []) => {
     if (!imageFile) return null;
@@ -275,6 +318,27 @@ function ProductEditor({
       setUploading(false);
     }
   };
+  const toggleTemplate = async (image, useTemplate) => {
+    if (uploading) return;
+    setUploading(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await api.updateProductImage(form.id, image.id, {use_template: useTemplate});
+      setForm((previous) => ({
+        ...previous,
+        images: previous.images.map((item) => (item.id === image.id ? {...item, ...response.data} : item)),
+      }));
+      setNotice(
+        response.warning ||
+          (useTemplate ? "Gambar memakai template latar toko." : "Gambar ditampilkan dengan latar aslinya."),
+      );
+    } catch (err) {
+      setError(apiErrorMessage(err, "Pengaturan latar gambar belum dapat disimpan."));
+    } finally {
+      setUploading(false);
+    }
+  };
   const deleteImage = async (image) => {
     if (uploading) return;
     setUploading(true);
@@ -293,6 +357,15 @@ function ProductEditor({
       setUploading(false);
     }
   };
+  // Template yang akan dipakai produk ini: override kategori (urut id) atau default toko.
+  const backdrops = useBackdrops();
+  const overrideCategory = categoryOptions
+    .filter((category) => form.category_ids.includes(category.id) && category.image_backdrop_id)
+    .sort((a, b) => a.id - b.id)[0];
+  const backdrop =
+    backdrops.find((item) => item.id === overrideCategory?.image_backdrop_id) ||
+    backdrops.find((item) => item.is_default) ||
+    null;
   // Perubahan dianggap belum tersimpan bila data form berbeda dari versi terakhir yang disimpan
   // atau ada gambar terpilih yang belum diunggah. Daftar gambar dikecualikan karena langsung tersimpan.
   const requestClose = useUnsavedGuard(
@@ -557,20 +630,30 @@ function ProductEditor({
               <div className="adm-section-head">
                 <div>
                   <h3>Gambar produk</h3>
-                  <p id="product-image-help">JPEG, PNG, atau WebP, 300–4000 px, maksimal 5 MB. Produk baru akan mengunggah gambar saat disimpan.</p>
+                  <p id="product-image-help">Gunakan PNG/WebP berlatar transparan agar latar mengikuti template toko; JPEG atau foto berlatar penuh ditampilkan apa adanya. 300–4000 px, maksimal 5 MB. Produk baru akan mengunggah gambar saat disimpan.</p>
                 </div>
               </div>
               {imagePreview && imageFile && (
-                <div className="adm-image-preview"><img src={imagePreview} alt="Preview gambar yang dipilih" /><span><strong>{imageFile.name}</strong><small>Siap diunggah</small></span></div>
+                <div className="adm-image-preview"><img {...(imageWarning ? {} : backdropFrameProps(backdrop))} src={imagePreview} alt="Preview gambar yang dipilih" /><span><strong>{imageFile.name}</strong><small>{imageWarning || "Siap diunggah · tampil di atas template latar"}</small></span></div>
               )}
               {form.images?.length ? (
                 <div className="adm-image-list">
                   {form.images.map((image) => (
                     <div key={image.id}>
-                      <img src={catalogImageUrl(image.path)} alt="" />
+                      <img {...(image.use_template ? backdropFrameProps(backdrop) : {})} src={catalogImageUrl(image.path)} alt="" />
                       <span>
                         <strong>{image.alt_text || form.name}</strong>
                         <small>{image.path}</small>
+                        <label className="adm-image-template">
+                          <input
+                            type="checkbox"
+                            checked={Boolean(image.use_template)}
+                            disabled={uploading}
+                            onChange={(event) => toggleTemplate(image, event.target.checked)}
+                          />
+                          Pakai template latar
+                          {!image.has_transparency && <Badge tone="warning">Tidak transparan</Badge>}
+                        </label>
                       </span>
                       {image.is_primary && <Badge tone="success">Utama</Badge>}
                       {confirmImage === image.id ? (

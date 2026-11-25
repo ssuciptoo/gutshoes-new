@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\Catalog\BackdropResolver;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
@@ -85,7 +86,9 @@ class CatalogController extends Controller
     private function resource(Product $product): array
     {
         return ['slug' => $product->slug, 'name' => $product->name, 'description' => $product->description, 'brand' => ['name' => $product->brand->name, 'slug' => $product->brand->slug],
-            'categories' => $product->categories->map->only(['name', 'slug'])->values(), 'images' => $product->images->map->only(['id', 'path', 'alt_text', 'is_primary'])->values(),
+            'categories' => $product->categories->map->only(['name', 'slug'])->values(), 'images' => $product->images->map->only(['id', 'path', 'alt_text', 'is_primary', 'position', 'use_template'])->values(),
+            // Template latar untuk gambar dengan use_template=true (override kategori atau default toko).
+            'backdrop_id' => app(BackdropResolver::class)->idForProduct($product),
             'variants' => $product->variants->sortBy(fn ($v) => $v->size->sort_value ?? PHP_FLOAT_MAX)
                 ->map(fn ($v) => ['id' => $v->id, 'sku' => $v->sku, 'size' => $v->size->label, 'size_value' => $v->size->value, 'foot_length_cm' => $v->size->foot_length_cm, 'price' => (string) $v->price, 'currency' => $v->currency,
                     'weight_grams' => $v->weight_grams, 'available_stock' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)), 'sold_out' => $v->inventories->sum(fn ($i) => max(0, $i->on_hand - $i->reserved)) === 0])->values()];

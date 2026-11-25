@@ -1,10 +1,12 @@
 <?php
 
+use App\Domain\Catalog\BackdropResolver;
 use App\Domain\Store\StoreInfo;
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\AdminBrandController;
 use App\Http\Controllers\Api\V1\AdminCategoryController;
 use App\Http\Controllers\Api\V1\AdminFulfillmentController;
+use App\Http\Controllers\Api\V1\AdminImageBackdropController;
 use App\Http\Controllers\Api\V1\AdminOperationsController;
 use App\Http\Controllers\Api\V1\AdminProductController;
 use App\Http\Controllers\Api\V1\AdminSizeController;
@@ -33,6 +35,7 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
     Route::get('/regions/districts', [RegionController::class, 'districts']);
     Route::get('/regions/villages', [RegionController::class, 'villages']);
     Route::get('/store-info', fn (StoreInfo $info) => response()->json(['data' => $info->current()]));
+    Route::get('/image-backdrops', fn (BackdropResolver $backdrops) => response()->json(['data' => $backdrops->all()]));
     Route::get('/sitemap.xml', SitemapController::class);
     // Dipanggil nginx toko (subrequest SSI) untuk setiap halaman produk: semua dari IP server toko,
     // jadi tidak memakai batas per-IP; hasilnya di-cache 10 menit per produk.
@@ -102,7 +105,10 @@ Route::prefix('v1')->middleware('throttle:api')->group(function (): void {
                 Route::apiResource('products', AdminProductController::class);
                 Route::post('/products/{product}/publish', [AdminProductController::class, 'publish']);
                 Route::post('/products/{product}/images', [AdminProductController::class, 'uploadImage']);
+                Route::patch('/products/{product}/images/{image}', [AdminProductController::class, 'updateImage']);
                 Route::delete('/products/{product}/images/{image}', [AdminProductController::class, 'deleteImage']);
+                Route::apiResource('image-backdrops', AdminImageBackdropController::class)->except('show');
+                Route::post('/image-backdrops/{imageBackdrop}/image', [AdminImageBackdropController::class, 'uploadImage']);
             });
         });
     });

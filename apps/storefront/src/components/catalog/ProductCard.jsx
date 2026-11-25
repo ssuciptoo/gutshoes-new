@@ -1,5 +1,6 @@
 import React from "react";
 import {rupiah} from "../../lib/currency";
+import {backdropFrameProps, useBackdrop} from "../../lib/backdrops";
 
 function ProductCard({product, onOpen}) {
   const href = `/product/${encodeURIComponent(product.slug || product.id)}`;
@@ -8,9 +9,12 @@ function ProductCard({product, onOpen}) {
     event.preventDefault();
     onOpen(product);
   };
+  // Foto transparan memakai template latar toko; foto berlatar penuh tampil apa adanya.
+  const backdrop = useBackdrop(product.backdropId);
+  const frame = product.imageUseTemplate ? backdropFrameProps(backdrop, "product-card__image") : {className: "product-card__image"};
   return (
     <article className="product-card">
-      <a href={href} className="product-card__image" onClick={open} aria-label={`Lihat ${product.name}`}>
+      <a href={href} {...frame} onClick={open} aria-label={`Lihat ${product.name}`}>
         {product.image ? (
           <img src={product.image} alt={product.imageAlt || product.name} loading="lazy" decoding="async" />
         ) : (

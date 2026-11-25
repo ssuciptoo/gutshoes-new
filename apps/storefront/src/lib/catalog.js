@@ -35,6 +35,7 @@ export function mapCatalogProduct(item) {
       alt: image.alt_text || item.name,
       isPrimary: Boolean(image.is_primary),
       position: Number(image.position) || 0,
+      useTemplate: Boolean(image.use_template),
     }))
     .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary) || a.position - b.position);
   const primaryImage = images[0];
@@ -50,6 +51,8 @@ export function mapCatalogProduct(item) {
     price: prices.length ? Math.min(...prices) : 0,
     image: primaryImage?.src || "",
     imageAlt: primaryImage?.alt || item.name,
+    imageUseTemplate: Boolean(primaryImage?.useTemplate),
+    backdropId: item.backdrop_id ?? null,
     images,
     sizes: mappedVariants.map((variant) => variant.size),
     stock: Object.fromEntries(mappedVariants.map((variant) => [variant.size, variant.stock])),

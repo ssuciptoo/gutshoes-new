@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class AdminProductController extends Controller
 {
@@ -86,13 +87,32 @@ class AdminProductController extends Controller
     public function uploadImage(Request $request, Product $product, ImageSanitizer $images): JsonResponse
     {
         $data = $request->validate(['image' => ['required', 'image', 'mimes:jpeg,png,webp', 'max:5120', 'dimensions:min_width=300,min_height=300,max_width=4000,max_height=4000'], 'alt_text' => ['nullable', 'string', 'max:255'], 'is_primary' => ['sometimes', 'boolean']]);
+        // Foto transparan otomatis memakai template latar toko; foto berlatar penuh ditampilkan apa adanya.
+        $transparency = $images->transparency((string) file_get_contents($data['image']->getRealPath()));
+        if ($transparency['ratio'] > 0.97) {
+            throw ValidationException::withMessages(['image' => ['Gambar hampir kosong; pastikan sepatu terlihat jelas.']]);
+        }
         $path = $images->store($data['image'], "products/{$product->id}");
         if ($data['is_primary'] ?? false) {
             $product->images()->update(['is_primary' => false]);
         }
-        $image = $product->images()->create(['path' => $path, 'alt_text' => $data['alt_text'] ?? null, 'is_primary' => $data['is_primary'] ?? false, 'position' => (int) $product->images()->max('position') + 1]);
+        $image = $product->images()->create(['path' => $path, 'alt_text' => $data['alt_text'] ?? null, 'is_primary' => $data['is_primary'] ?? false,
+            'has_transparency' => $transparency['transparent'], 'use_template' => $transparency['transparent'], 'position' => (int) $product->images()->max('position') + 1]);
 
-        return response()->json(['data' => $image], 201);
+        return response()->json(['data' => $image->refresh()], 201);
+    }
+
+    public function updateImage(Request $request, Product $product, ProductImage $image): JsonResponse
+    {
+        abort_unless($image->product_id === $product->id, 404);
+        $data = $request->validate(['use_template' => ['required', 'boolean']]);
+        $image->update($data);
+
+        $warning = $image->use_template && ! $image->has_transparency
+            ? 'Gambar ini tidak transparan, jadi latar template tidak akan terlihat. Unggah PNG/WebP berlatar transparan.'
+            : null;
+
+        return response()->json(['data' => $image, 'warning' => $warning]);
     }
 
     public function deleteImage(Product $product, ProductImage $image): JsonResponse

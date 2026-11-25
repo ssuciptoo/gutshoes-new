@@ -6,6 +6,8 @@ import useUnsavedGuard from "../hooks/useUnsavedGuard";
 import Button from "./Button";
 import Icon from "./Icon";
 import Select from "../../components/ui/Select";
+import useAdminResource from "../hooks/useAdminResource";
+import {serverList} from "../lib/helpers";
 
 function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
   const isCategory = kind === "category";
@@ -16,7 +18,9 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
     slug: item?.slug || "",
     description: item?.description || "",
     parent_id: item?.parent_id ? String(item.parent_id) : "",
+    image_backdrop_id: item?.image_backdrop_id ? String(item.image_backdrop_id) : "",
   }));
+  const backdrops = useAdminResource(api.adminImageBackdrops);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -32,7 +36,10 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
       slug: form.slug.trim(),
       description: form.description.trim() || null,
       ...(isCategory
-        ? {parent_id: form.parent_id ? Number(form.parent_id) : null}
+        ? {
+            parent_id: form.parent_id ? Number(form.parent_id) : null,
+            image_backdrop_id: form.image_backdrop_id ? Number(form.image_backdrop_id) : null,
+          }
         : {}),
     };
     try {
@@ -161,6 +168,25 @@ function CatalogEditor({kind, item, categories, onClose, onSaved, onDeleted}) {
                       </option>
                     ))}
                 </Select>
+              </label>
+            )}
+            {isCategory && (
+              <label className="wide">
+                Template latar gambar
+                <Select
+                  value={form.image_backdrop_id}
+                  onChange={(event) => update("image_backdrop_id", event.target.value)}
+                >
+                  <option value="">Ikuti template default</option>
+                  {serverList(backdrops.data).map((backdrop) => (
+                    <option key={backdrop.id} value={backdrop.id}>
+                      {backdrop.name}{backdrop.is_default ? " (default saat ini)" : ""}
+                    </option>
+                  ))}
+                </Select>
+                <small className="adm-field-help">
+                  Dipakai foto produk transparan di kategori ini. Atur template di Pengaturan.
+                </small>
               </label>
             )}
             <label className="wide">

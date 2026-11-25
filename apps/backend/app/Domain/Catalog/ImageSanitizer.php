@@ -55,6 +55,45 @@ class ImageSanitizer
         return $webp;
     }
 
+    /**
+     * Seberapa transparan gambar: rasio piksel (sampel ±200×200) yang hampir tembus pandang dan
+     * jumlah sudut yang transparan. Foto sepatu yang latarnya sudah dihapus punya sudut transparan;
+     * JPEG atau PNG berlatar penuh bernilai 0.
+     *
+     * @return array{ratio: float, corners: int, transparent: bool}
+     */
+    public function transparency(string $bytes): array
+    {
+        $image = @imagecreatefromstring($bytes);
+        if ($image === false) {
+            throw ValidationException::withMessages(['image' => ['File gambar tidak dapat dibaca.']]);
+        }
+
+        try {
+            if (! imageistruecolor($image)) {
+                imagepalettetotruecolor($image);
+            }
+            $width = imagesx($image);
+            $height = imagesy($image);
+            $isClear = static fn (int $x, int $y): bool => ((imagecolorat($image, $x, $y) >> 24) & 0x7F) >= 100;
+
+            $step = max(1, intdiv(max($width, $height), 200));
+            $total = $clear = 0;
+            for ($y = 0; $y < $height; $y += $step) {
+                for ($x = 0; $x < $width; $x += $step) {
+                    $total++;
+                    $clear += $isClear($x, $y) ? 1 : 0;
+                }
+            }
+            $corners = (int) $isClear(0, 0) + (int) $isClear($width - 1, 0) + (int) $isClear(0, $height - 1) + (int) $isClear($width - 1, $height - 1);
+        } finally {
+            imagedestroy($image);
+        }
+        $ratio = $total > 0 ? $clear / $total : 0.0;
+
+        return ['ratio' => $ratio, 'corners' => $corners, 'transparent' => $ratio >= 0.02 && $corners >= 3];
+    }
+
     /** Terapkan orientasi EXIF JPEG sebelum metadatanya dibuang, supaya foto tidak miring. */
     private function orient(\GdImage $image, string $bytes): \GdImage
     {

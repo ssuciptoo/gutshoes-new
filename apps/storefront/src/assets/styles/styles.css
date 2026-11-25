@@ -415,6 +415,23 @@ button:disabled {
 .product-card:hover .product-card__image img {
   transform: scale(1.045);
 }
+/* Template latar foto produk transparan (diatur admin). Variabel diisi lewat backdropFrameProps. */
+.has-backdrop {
+  background-color: var(--backdrop-color);
+  background-image: var(--backdrop-image, none);
+  background-size: var(--backdrop-size, cover);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.has-backdrop[data-shadow] img {
+  filter: drop-shadow(0 18px 16px rgba(14, 32, 43, 0.18));
+}
+.product-gallery .gallery-slide.has-backdrop img {
+  filter: none;
+}
+.product-gallery .gallery-slide.has-backdrop[data-shadow] img {
+  filter: drop-shadow(0 28px 22px rgba(14, 32, 43, 0.17));
+}
 .product-card__meta {
   display: flex;
   justify-content: space-between;

@@ -690,3 +690,126 @@
 .admin-app .adm-stock-fields .ui-select-trigger{min-height:46px;border-radius:9px;padding-inline:14px}
 .admin-app .ui-select-trigger:focus-visible,.admin-app .ui-select-trigger[data-state=open]{border-color:var(--adm-action);box-shadow:0 0 0 3px #d4f2fa}
 @media(max-width:900px){.admin-app .ui-select-trigger{min-height:44px;font-size:1rem}.admin-app .adm-toolbar .ui-select-trigger{flex:1;width:100%;min-width:0}}
+
+/* Template latar gambar produk (Pengaturan, editor produk). */
+.adm-image-preview img.has-backdrop,
+.adm-image-list > div > img.has-backdrop {
+  background-color: var(--backdrop-color);
+  background-image: var(--backdrop-image, none);
+  background-size: var(--backdrop-size, cover);
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.adm-image-template {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px !important;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+.adm-image-template input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--adm-action);
+}
+.adm-backdrops {
+  margin-bottom: 18px;
+}
+.adm-backdrop-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.adm-backdrop-list > button {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border: 1px solid var(--adm-line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: left;
+}
+.adm-backdrop-list > button.active {
+  border-color: var(--adm-action);
+  box-shadow: 0 0 0 2px rgba(0, 125, 169, 0.18);
+}
+.adm-backdrop-list > button > span:not(.adm-backdrop-swatch):not(.adm-badge) {
+  display: flex;
+  flex-direction: column;
+}
+.adm-backdrop-list small {
+  color: var(--adm-muted);
+  font-weight: 550;
+}
+.adm-backdrop-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid var(--adm-line);
+}
+.adm-backdrop-editor {
+  display: grid;
+  gap: 16px;
+}
+.adm-backdrop-editor input[type="color"] {
+  height: 42px;
+  padding: 4px;
+}
+.adm-backdrop-editor > footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+}
+.adm-backdrop-editor > footer .adm-delete-link {
+  margin-inline-end: auto;
+}
+.adm-backdrop-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  gap: 14px;
+  padding: 14px;
+  border: 1px dashed var(--adm-line);
+  border-radius: 10px;
+  background: #fafbfc;
+}
+.adm-backdrop-preview figure {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+.adm-backdrop-preview figcaption {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+}
+.adm-backdrop-preview .product-card__image {
+  display: block;
+}
+.adm-backdrop-gallery {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.adm-backdrop-gallery img {
+  width: 88%;
+  height: 78%;
+  object-fit: contain;
+}
+@media (max-width: 640px) {
+  .adm-backdrop-preview {
+    grid-template-columns: 1fr;
+  }
+}

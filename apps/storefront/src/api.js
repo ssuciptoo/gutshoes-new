@@ -118,6 +118,7 @@ async function request(path, options = {}, retried = false) {
 export const backendBaseUrl = BACKEND_BASE;
 export const api = {
   storeInfo: () => request("/store-info"),
+  imageBackdrops: () => request("/image-backdrops"),
   provinces: () => request("/regions/provinces"),
   regencies: (code) =>
     request("/regions/regencies?province_code=" + encodeURIComponent(code)),
@@ -276,6 +277,18 @@ export const api = {
     request(`/admin/products/${id}/images`, {method: "POST", body: data}),
   deleteProductImage: (id, imageId) =>
     request(`/admin/products/${id}/images/${imageId}`, {method: "DELETE"}),
+  updateProductImage: (id, imageId, data) =>
+    request(`/admin/products/${id}/images/${imageId}`, {method: "PATCH", body: data}),
+  adminImageBackdrops: () => request("/admin/image-backdrops"),
+  saveImageBackdrop: (id, data) =>
+    request(id ? `/admin/image-backdrops/${id}` : "/admin/image-backdrops", {
+      method: id ? "PUT" : "POST",
+      body: data,
+    }),
+  deleteImageBackdrop: (id) =>
+    request(`/admin/image-backdrops/${id}`, {method: "DELETE"}),
+  uploadImageBackdropImage: (id, data) =>
+    request(`/admin/image-backdrops/${id}/image`, {method: "POST", body: data}),
   adjustInventory: (id, data) =>
     request(`/admin/inventories/${id}/adjust`, {method: "PATCH", body: data}),
   fulfillOrder: (id, data) =>

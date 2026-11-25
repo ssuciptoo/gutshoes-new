@@ -11,12 +11,15 @@ import './assets/styles/motion.css';
 import App from './App';
 import {AuthProvider} from './lib/clerk';
 import {StoreInfoProvider} from './lib/storeInfo';
+import {BackdropProvider} from './lib/backdrops';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
       <StoreInfoProvider>
-        <App />
+        <BackdropProvider>
+          <App />
+        </BackdropProvider>
       </StoreInfoProvider>
     </AuthProvider>
   </React.StrictMode>,
