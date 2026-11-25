@@ -292,9 +292,10 @@ it('flags success on a replaced payment attempt for review without touching the 
     ['order' => $order] = payableOrder();
     $url = "/api/v1/guest/orders/{$order->order_number}/payment";
     $this->postJson($url)->assertCreated();
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'pending'))->assertOk();
     $this->postJson($url, ['change_method' => true])->assertCreated();
 
-    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'old-1', 'settlement'))->assertOk();
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'settlement'))->assertOk();
 
     expect($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
         ->and(PaymentWebhook::latest('id')->first()->processing_error)->toContain('manual review');
@@ -304,12 +305,13 @@ it('keeps a payment that lands while the old session is being closed', function 
     ['order' => $order] = payableOrder();
     $url = "/api/v1/guest/orders/{$order->order_number}/payment";
     $this->postJson($url)->assertCreated();
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'pending'))->assertOk();
     $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
     {
         public function closeTransaction(Order $order, string $action): array
         {
             return ['order_id' => $order->midtransOrderId(), 'transaction_status' => 'settlement',
-                'transaction_id' => 'paid-during-close', 'gross_amount' => '120000.00'];
+                'transaction_id' => 'qris-1', 'gross_amount' => '120000.00'];
         }
     });
 
@@ -324,6 +326,7 @@ it('does not change method when the old session cannot be closed', function () {
     ['order' => $order] = payableOrder();
     $url = "/api/v1/guest/orders/{$order->order_number}/payment";
     $first = $this->postJson($url)->assertCreated();
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'pending'))->assertOk();
     $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
     {
         public function closeTransaction(Order $order, string $action): array
@@ -336,4 +339,43 @@ it('does not change method when the old session cannot be closed', function () {
 
     expect($order->payment->refresh()->snap_token)->toBe($first->json('data.payment.snap_token'))
         ->and($order->payment->attempt)->toBe(1);
+});
+
+it('issues a new token for the same Midtrans order ID when no charge exists yet', function () {
+    ['order' => $order] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $this->postJson($url)->assertCreated();
+    $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
+    {
+        public function closeTransaction(Order $order, string $action): array
+        {
+            throw new RuntimeException('Must not close a session without a charge');
+        }
+    });
+
+    $this->postJson($url, ['change_method' => true])->assertCreated()
+        ->assertJsonPath('data.payment.attempt', 1)
+        ->assertJsonPath('data.payment.provider_order_id', $order->order_number);
+    $this->assertDatabaseCount('payment_attempts', 0);
+});
+
+it('starts a new attempt after a failed charge without trying to close it', function () {
+    ['order' => $order, 'inventory' => $inventory] = payableOrder();
+    $url = "/api/v1/guest/orders/{$order->order_number}/payment";
+    $this->postJson($url)->assertCreated();
+    $this->postJson('/api/v1/payments/midtrans/webhook', signedMidtransPayload($order->order_number, 'qris-1', 'deny'))->assertOk();
+    $this->app->bind(MidtransProvider::class, fn () => new class extends FakeMidtransProvider
+    {
+        public function closeTransaction(Order $order, string $action): array
+        {
+            throw new RuntimeException('Denied charges cannot be cancelled');
+        }
+    });
+
+    $this->postJson($url, ['change_method' => true])->assertCreated()
+        ->assertJsonPath('data.payment.status', 'PENDING')
+        ->assertJsonPath('data.payment.provider_order_id', $order->order_number.'-2');
+    $this->assertDatabaseHas('payment_attempts', ['provider_order_id' => $order->order_number, 'provider_status' => 'deny']);
+    expect($order->refresh()->getRawOriginal('status'))->toBe('PENDING_PAYMENT')
+        ->and($inventory->refresh()->reserved)->toBe(1);
 });

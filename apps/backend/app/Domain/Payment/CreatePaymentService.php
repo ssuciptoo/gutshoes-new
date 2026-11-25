@@ -2,12 +2,14 @@
 
 namespace App\Domain\Payment;
 
+use App\Enums\PaymentStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use DomainException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use RuntimeException;
 use Throwable;
 
 class CreatePaymentService
@@ -57,8 +59,9 @@ class CreatePaymentService
     }
 
     /**
-     * Midtrans mengunci order_id ke metode yang pertama kali dipilih. Percobaan lama ditutup
-     * (cancel terkonfirmasi) sebelum percobaan baru memakai order_id lain. Kunci order dipegang
+     * Midtrans mengunci order_id ke metode yang pertama kali dipilih. Status Midtrans dibaca dulu:
+     * tanpa charge, token baru dibuat untuk order_id yang sama; charge pending ditutup (cancel
+     * terkonfirmasi) dan charge gagal dibiarkan, lalu percobaan baru memakai order_id lain. Kunci order dipegang
      * selama penutupan sehingga webhook untuk percobaan lama menunggu dan lalu dikenali sebagai
      * percobaan yang sudah diganti.
      *
@@ -85,13 +88,39 @@ class CreatePaymentService
                     $this->assertReusable($payment);
                 }
                 $previousOrderId = $payment->midtransOrderId();
-                $closer = new ClosePendingPayment($this->provider, app(ConfirmPayment::class), app(MidtransStatusMapper::class));
-                if (! $closer->close($locked, 'cancel')) {
-                    // Pembayaran ternyata masuk saat sesi ditutup dan sudah direkonsiliasi. Jangan lempar
-                    // exception di sini: rollback akan membatalkan pencatatan pembayaran itu.
+                $status = $this->provider->getStatus($locked);
+                if ($status === null) {
+                    // Belum ada charge (mis. QRIS gagal sebelum transaksi terbentuk). Token baru untuk
+                    // order_id yang sama menggantikan token lama yang belum dipakai; tidak ada yang ditutup.
+                    $payment->update(['snap_token' => null, 'redirect_url' => null, 'initialization_state' => 'creating']);
+
+                    return [$payment, true];
+                }
+                if (($status['order_id'] ?? null) !== $previousOrderId) {
+                    throw new RuntimeException('Provider returned another order.');
+                }
+                $internal = app(MidtransStatusMapper::class)->internalStatus($status);
+                if ($internal === PaymentStatus::SUCCESS) {
+                    // Sudah dibayar: catat lewat jalur yang sama dengan webhook, jangan buat sesi baru.
+                    app(ApplyMidtransStatus::class)->apply($locked, $payment, $status);
+
                     return [$payment->refresh(), false];
                 }
-                $payment->refresh();
+                if ($internal === PaymentStatus::PENDING) {
+                    $closer = new ClosePendingPayment($this->provider, app(ConfirmPayment::class), app(MidtransStatusMapper::class));
+                    if (! $closer->close($locked, 'cancel')) {
+                        // Pembayaran ternyata masuk saat sesi ditutup dan sudah direkonsiliasi. Jangan lempar
+                        // exception di sini: rollback akan membatalkan pencatatan pembayaran itu.
+                        return [$payment->refresh(), false];
+                    }
+                    $payment->refresh();
+                } else {
+                    // deny/failure/cancel/expire: charge lama sudah tidak bisa dibayar, tidak perlu ditutup.
+                    $payment->update([
+                        'provider_status' => mb_substr((string) $status['transaction_status'], 0, 32),
+                        'provider_transaction_id' => $status['transaction_id'] ?? $payment->provider_transaction_id,
+                    ]);
+                }
                 $payment->attempts()->create([
                     'provider_order_id' => $previousOrderId,
                     'provider_transaction_id' => $payment->provider_transaction_id,
