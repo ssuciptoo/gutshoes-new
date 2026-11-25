@@ -435,6 +435,30 @@ sudo docker compose run --rm --no-deps api php artisan gutshoes:sanitize-product
 sudo docker compose run --rm --no-deps api php artisan gutshoes:sanitize-product-images
 ```
 
+## 7a. Membuka database staging
+
+MySQL tidak dibuka ke internet. Port 3306 hanya terpasang di `127.0.0.1` VPS, jadi aksesnya lewat
+terminal VPS atau SSH tunnel.
+
+**Terminal VPS:**
+
+```bash
+cd /opt/gutshoes && sudo docker compose exec mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" gutshoes'
+```
+
+**Aplikasi di laptop (DBeaver, HeidiSQL, TablePlus, MySQL Workbench)** dengan SSH tunnel bawaan aplikasi:
+
+| Tab | Isian |
+|---|---|
+| SSH | Host = IP VPS, port 22, user `root` (atau user SSH Anda), password/kunci SSH |
+| Koneksi MySQL | Host `127.0.0.1`, port `3306`, database `gutshoes`, user `gutshoes`, password = `MYSQL_PASSWORD` di `/opt/gutshoes/.env` |
+
+Lihat password: `sudo grep '^MYSQL_PASSWORD=' /opt/gutshoes/.env`. Jangan menyimpannya di repo atau chat.
+
+Aturan pakai: gunakan untuk melihat data dan investigasi. **Jangan mengubah status pesanan,
+pembayaran, atau stok langsung di tabel**; ubah lewat panel admin agar riwayat status, reservasi
+stok, dan audit log tetap konsisten. Backup dulu (`deploy.sh backup`) sebelum mengubah data apa pun.
+
 ## 8. Rollback
 
 - Kembali ke commit yang terakhir baik: `sudo /opt/gutshoes/deploy.sh deploy <hash-12-karakter>`.

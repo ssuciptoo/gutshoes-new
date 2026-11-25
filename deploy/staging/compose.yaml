@@ -106,7 +106,9 @@ services:
       - mysql-data:/var/lib/mysql
       - ./mysql.cnf:/etc/mysql/conf.d/gutshoes.cnf:ro
     mem_limit: 640m
-    # Tidak ada "ports": MySQL hanya bisa dijangkau dari jaringan internal compose.
+    # Hanya di 127.0.0.1 VPS: tidak bisa dijangkau dari internet, hanya lewat SSH tunnel untuk
+    # aplikasi database di laptop (DBeaver/HeidiSQL). Jangan ganti menjadi "3306:3306".
+    ports: ["127.0.0.1:3306:3306"]
     networks: [gutshoes]
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
