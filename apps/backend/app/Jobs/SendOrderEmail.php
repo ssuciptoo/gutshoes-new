@@ -104,7 +104,11 @@ class SendOrderEmail implements ShouldQueue
         return $content + ['shipment' => null];
     }
 
-    /** Kurir dan nomor resi untuk email "sedang dikirim"; null bila resi belum tersimpan. */
+    /**
+     * Kurir dan nomor resi untuk email "sedang dikirim"; null bila resi belum tersimpan.
+     *
+     * @return array{courier: string, tracking_number: string}|null
+     */
     private function shipment(Order $order): ?array
     {
         $shipment = $order->shipment;
