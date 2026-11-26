@@ -300,7 +300,7 @@ Tombol di **Aksi operasional** hanya menampilkan langkah yang sah untuk status s
 1. Setelah paket diserahkan ke kurir, buka pesanan berstatus **Diproses**.
 2. Pilih **Masukkan resi & kirim**.
 3. Isi **Nomor resi** persis seperti dari kurir.
-4. Pilih **Konfirmasi**. Pelanggan menerima email pembaruan pesanan, dan nomor resi tampil di detail pesanan serta halaman **Lacak pesanan** di toko.
+4. Pilih **Konfirmasi**. Pelanggan otomatis menerima email *Pesananmu sedang dikirim* berisi nama kurir dan nomor resi. Resi juga tampil di detail pesanan dan halaman **Lacak pesanan** di toko.
 
 **c. Dikirim → Diterima**
 
@@ -327,8 +327,8 @@ Filter **Lewat batas bayar** menampilkan pesanan yang belum dibayar dan sudah me
 | Pembayaran berhasil | Pembayaran berhasil |
 | Tidak dibayar sampai batas waktu | Pembayaran kedaluwarsa |
 | Pesanan dibatalkan | Pesanan dibatalkan |
-| Admin menandai **Dikirim** | Pembaruan pesanan (nomor resi dilihat pelanggan di detail pesanan / Lacak pesanan) |
-| Admin menandai **Diterima** | Pembaruan pesanan |
+| Admin menandai **Dikirim** | Pesanan sedang dikirim, berisi kurir dan nomor resi |
+| Admin menandai **Diterima** | Pesanan sudah diterima |
 
 Admin tidak perlu mengirim email ini manual.
 

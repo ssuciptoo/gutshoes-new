@@ -17,6 +17,19 @@
                             <p style="margin:0 0 16px">Halo {{ $order->customer_name }},</p>
                             <p style="margin:0 0 16px">{{ $content['intro'] }}</p>
 
+                            @if ($content['shipment'])
+                                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f7f9;border-radius:8px;margin:0 0 16px">
+                                    <tr>
+                                        <td style="padding:12px 16px;font-size:14px">
+                                            <span style="color:#60717a">Kurir</span><br><strong>{{ $content['shipment']['courier'] }}</strong>
+                                        </td>
+                                        <td style="padding:12px 16px;font-size:14px">
+                                            <span style="color:#60717a">Nomor resi</span><br><strong style="font-family:Consolas,Menlo,monospace;letter-spacing:0.5px">{{ $content['shipment']['tracking_number'] }}</strong>
+                                        </td>
+                                    </tr>
+                                </table>
+                            @endif
+
                             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #e3e8eb;border-bottom:1px solid #e3e8eb;margin:0 0 16px">
                                 @foreach ($order->items as $item)
                                     <tr>

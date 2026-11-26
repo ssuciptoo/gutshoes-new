@@ -4,6 +4,11 @@ GutShoes · Pesanan {!! $order->order_number !!}
 Halo {!! $order->customer_name !!},
 
 {!! $content['intro'] !!}
+@if ($content['shipment'])
+
+Kurir: {!! $content['shipment']['courier'] !!}
+Nomor resi: {!! $content['shipment']['tracking_number'] !!}
+@endif
 
 @foreach ($order->items as $item)
 - {!! $item->product_name !!} (ukuran {!! $item->size_label !!}, {!! $item->quantity !!} barang): Rp{{ number_format((float) $item->line_total, 0, ',', '.') }}

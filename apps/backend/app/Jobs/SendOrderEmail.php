@@ -57,6 +57,8 @@ class SendOrderEmail implements ShouldQueue
             'payment_success' => "Pembayaran {$order->order_number} berhasil",
             'payment_expired' => "Pembayaran {$order->order_number} kedaluwarsa",
             'order_cancelled' => "Pesanan {$order->order_number} dibatalkan",
+            'shipped' => "Pesanan {$order->order_number} sedang dikirim",
+            'delivered' => "Pesanan {$order->order_number} sudah diterima",
             default => "Pembaruan pesanan {$order->order_number}",
         };
     }
@@ -65,7 +67,7 @@ class SendOrderEmail implements ShouldQueue
      * Isi email per jenis. Pelanggan berakun diarahkan ke detail pesanan di akunnya; guest memakai
      * tautan pemulihan rahasia (berisi token akses pesanan).
      *
-     * @return array{headline: string, intro: string, deadline: ?string, cta_label: ?string, cta_url: ?string, private_link: bool}
+     * @return array{headline: string, intro: string, deadline: ?string, cta_label: ?string, cta_url: ?string, private_link: bool, shipment: ?array{courier: string, tracking_number: string}}
      */
     private function content(Order $order, GuestOrderAccess $guestAccess): array
     {
@@ -75,7 +77,7 @@ class SendOrderEmail implements ShouldQueue
         $orderUrl = $accountUrl ?? $recoveryUrl;
         $deadline = $order->expires_at->copy()->timezone('Asia/Jakarta')->locale('id')->translatedFormat('d F Y, H.i').' WIB';
 
-        return match ($this->template) {
+        $content = match ($this->template) {
             'order_created' => ['headline' => 'Pesananmu sudah kami terima',
                 'intro' => 'Terima kasih sudah berbelanja di GutShoes. Selesaikan pembayaran agar pesananmu segera kami proses.',
                 'deadline' => $deadline, 'cta_label' => 'Lihat pesanan & bayar', 'cta_url' => $orderUrl, 'private_link' => $recoveryUrl !== null],
@@ -88,8 +90,31 @@ class SendOrderEmail implements ShouldQueue
             'order_cancelled' => ['headline' => 'Pesanan dibatalkan',
                 'intro' => 'Pesananmu sudah dibatalkan. Bila pesanan sudah dibayar, dana akan dikembalikan sesuai metode pembayaran.',
                 'deadline' => null, 'cta_label' => 'Lihat pesanan', 'cta_url' => $orderUrl, 'private_link' => $recoveryUrl !== null],
+            'shipped' => ['headline' => 'Pesananmu sedang dikirim',
+                'intro' => 'Paketmu sudah kami serahkan ke kurir. Gunakan nomor resi di bawah untuk melacak pengiriman di situs atau aplikasi kurir.',
+                'deadline' => null, 'cta_label' => 'Lacak pesanan', 'cta_url' => $orderUrl, 'private_link' => $recoveryUrl !== null,
+                'shipment' => $this->shipment($order)],
+            'delivered' => ['headline' => 'Pesananmu sudah diterima',
+                'intro' => 'Paketmu sudah tercatat diterima. Terima kasih sudah berbelanja di GutShoes. Bila ada kendala dengan barang, hubungi kami sesuai ketentuan pengembalian.',
+                'deadline' => null, 'cta_label' => 'Lihat pesanan', 'cta_url' => $orderUrl, 'private_link' => $recoveryUrl !== null],
             default => ['headline' => 'Ada pembaruan untuk pesananmu', 'intro' => 'Lihat detail pesanan untuk status terbaru.',
                 'deadline' => null, 'cta_label' => 'Lihat pesanan', 'cta_url' => $orderUrl, 'private_link' => $recoveryUrl !== null],
         };
+
+        return $content + ['shipment' => null];
+    }
+
+    /** Kurir dan nomor resi untuk email "sedang dikirim"; null bila resi belum tersimpan. */
+    private function shipment(Order $order): ?array
+    {
+        $shipment = $order->shipment;
+        if (! $shipment || blank($shipment->tracking_number)) {
+            return null;
+        }
+
+        return [
+            'courier' => trim(strtoupper((string) $shipment->courier).' '.(string) $shipment->service),
+            'tracking_number' => (string) $shipment->tracking_number,
+        ];
     }
 }

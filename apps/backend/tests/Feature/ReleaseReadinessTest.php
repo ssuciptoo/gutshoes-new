@@ -89,6 +89,31 @@ it('renders a clean order email with HTML and plain text versions', function () 
         ->and($text)->toContain('Total: Rp457.000', 'Lihat pesanan & bayar: https://toko.test/orders/GS-MAIL-0002');
 });
 
+it('includes the courier and tracking number in the shipped email', function () {
+    config(['mail.default' => 'array', 'services.storefront.url' => 'https://toko.test']);
+    $warehouse = Warehouse::factory()->create();
+    $customer = User::factory()->create();
+    $order = Order::create(['order_number' => 'GS-MAIL-0003', 'user_id' => $customer->id, 'warehouse_id' => $warehouse->id, 'customer_email' => 'mail3@example.test', 'customer_name' => 'Rina', 'customer_phone' => '08123',
+        'status' => 'SHIPPED', 'subtotal' => '449000.00', 'product_discount' => '0.00', 'voucher_discount' => '0.00', 'shipping_fee' => '8000.00', 'grand_total' => '457000.00',
+        'currency' => 'IDR', 'idempotency_key' => 'mail-key-0000000003', 'payload_hash' => str_repeat('a', 64), 'expires_at' => now()->addDay()]);
+    $order->shipment()->create(['provider' => 'RAJAONGKIR', 'courier' => 'jne', 'service' => 'REG', 'fee' => '8000.00', 'tracking_number' => 'JNE<123>456',
+        'status' => 'SHIPPED', 'quote_snapshot' => [], 'shipped_at' => now()]);
+
+    (new SendOrderEmail($order->id, 'shipped'))->handle();
+
+    $message = app('mailer')->getSymfonyTransport()->messages()->first()->getOriginalMessage();
+    expect($message->getSubject())->toBe('Pesanan GS-MAIL-0003 sedang dikirim')
+        ->and($message->getHtmlBody())->toContain('Pesananmu sedang dikirim', 'JNE REG', 'JNE&lt;123&gt;456', 'Lacak pesanan', 'https://toko.test/orders/GS-MAIL-0003')
+        ->not->toContain('JNE<123>456')
+        ->and($message->getTextBody())->toContain('Kurir: JNE REG', 'Nomor resi: JNE<123>456');
+
+    // Email lain tidak menampilkan blok resi.
+    (new SendOrderEmail($order->id, 'delivered'))->handle();
+    $delivered = app('mailer')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+    expect($delivered->getSubject())->toBe('Pesanan GS-MAIL-0003 sudah diterima')
+        ->and($delivered->getHtmlBody())->toContain('Pesananmu sudah diterima')->not->toContain('Nomor resi');
+});
+
 it('starts Horizon queue workers in every deployed environment', function (string $environment) {
     // Environment tanpa entri di config/horizon.php tidak mendapat worker, sehingga email pesanan tertahan.
     $supervisors = ProvisioningPlan::get('ci-check')->toSupervisorOptions()[$environment] ?? [];
