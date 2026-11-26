@@ -40,7 +40,11 @@ coverage/
 Thumbs.db
 *.log
 
-.impeccable/chrome-qa/
+# Peralatan asisten AI lokal (Codex + skill impeccable) dan arsip desainnya: dipakai di laptop,
+# bukan bagian aplikasi. Ringkasan desain tetap di DESIGN.md dan PRODUCT.md.
+.agents/
+.codex/
+.impeccable/
 
 # Private keys, certificates, and provider credentials
 *.pem
