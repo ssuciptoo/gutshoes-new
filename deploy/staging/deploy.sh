@@ -4,7 +4,7 @@
 #   deploy [tag]   tarik image, migrasi + data wilayah, lalu jalankan ulang semua layanan
 #                  (tanpa tag: IMAGE_TAG di .env; isi hash commit untuk rollback)
 #   admin          buat/ubah akun admin (password diminta lewat prompt)
-#   backup         dump database ke backups/ (dipanggil cron harian; simpan 14 hari)
+#   backup         dump database ke backups/ (dipanggil cron harian; simpan 7 hari)
 #   status         status container, health API, dan pemakaian memori
 #   check          cek konfigurasi Midtrans sandbox + uji server key ke API sandbox (tanpa transaksi)
 #   logs [layanan] ikuti log (mis. logs api, logs horizon)
@@ -65,7 +65,7 @@ case "$cmd" in
     # Root di dalam container: user aplikasi tidak punya hak SHOW_ROUTINE yang dibutuhkan --routines.
     compose exec -T mysql sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" mysqldump --single-transaction --routines --triggers --no-tablespaces -uroot "$MYSQL_DATABASE"' | gzip -9 > "$out"
     gzip -t "$out"
-    find "$APP_DIR/backups" -name 'gutshoes-*.sql.gz' -mtime +14 -delete
+    find "$APP_DIR/backups" -name 'gutshoes-*.sql.gz' -mtime +7 -delete
     echo "Backup: $out ($(du -h "$out" | cut -f1))"
     ;;
   status)
